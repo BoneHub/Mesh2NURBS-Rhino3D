@@ -75,6 +75,7 @@ def PreProcessing(mesh, outputPath, fileName=None, preProcessing='shrinkwrap', o
         for mesh in allMeshes:
             area.append(rs.MeshArea(mesh)[1])
         rs.UnselectAllObjects()
+        rs.SelectObject(allMeshes[area.index(max(area))])
         rs.Command("_-Invert Enter")
         rs.Command("_-Delete Enter")
         rs.Command("_-SelAll Enter")
@@ -114,14 +115,17 @@ def exportMesh(mesh, outputPath, fileType, fileName):
     import matplotlib.pyplot as plt_mpl # type: ignore
     from scipy.spatial import KDTree # type: ignore
     rs.SelectObject(mesh)
-    name = fileName
-    if fileType == 'igs' or fileType == 'iges' or fileType == 'step' or fileType == 'stp':
-        outputFile = f"{outputPath}\{name}.{fileType}"
-        rs.Command(f"_-Export ({outputFile}) Enter")
+    if fileType == 'igs' or fileType == 'iges' or fileType == 'step' or fileType == 'stp' or fileType == 'ply':
+        outputFile = os.path.join(outputPath, f"{fileName}.{fileType}")
+        
+        export_options = "_Version=8 _SaveSmall=No _GeometryOnly=Yes _SaveTextures=No _SaveNotes=No _SavePlugInData=No"
+        
+        command_string = f'_-Export {export_options} "{outputFile}" _Enter _Enter'
+        rs.Command(command_string)
     else:
-        print("Wrong filetype inputted, choose between 'igs', 'iges', 'step', 'stp'")
+        print("Wrong filetype. Supported extensions are: igs, iges, step, ply, stl. Inputted filetype was: ", fileType)
 
-def stl2cad(mesh, targetEdgeLength=2, adaptiveSize=100, deleteInputs=True, subd=True):
+def stl2cad(mesh, targetEdgeLength=2, adaptiveSize=100, deleteInputs=True, subd=True, type='1'):
     """
     Converts an STL-like mesh to a CAD format (NURBS or SubD).
 
@@ -172,7 +176,12 @@ def stl2cad(mesh, targetEdgeLength=2, adaptiveSize=100, deleteInputs=True, subd=
                     rs.DeleteObject(quad)
             else:
                 subd = mesh_to_subd(quad)
-                outMesh = subd_to_nurbs(subd)
+                if type == '1':
+                    outMesh = subd_to_nurbs(subd)
+                elif type == '2':
+                    outMesh = subd_to_nurbs_many_faces(subd)
+                else:
+                    print("Wrong input type, choose between '1' and '2'")
             retry = False
         else:
             print("Error: quadremesh failed, trying again...")
@@ -388,6 +397,7 @@ def chamferDistance(mesh1, mesh2, quads=True):
 
             dist.append(pcu.chamfer_distance(faces1, faces2)) 
             dist.append(pcu.hausdorff_distance(faces1, faces2))
+            dist.append(rs.MeshVolume(id2))
         else:
             dist = [None, None]
             print("Invalid input meshes")
@@ -414,6 +424,7 @@ def chamferDistance(mesh1, mesh2, quads=True):
 
             dist.append(pcu.chamfer_distance(faces1, faces2)) 
             dist.append(pcu.hausdorff_distance(faces1, faces2))
+            dist.append(rs.MeshVolume(id2))
         else:
             dist = [None, None]
             print("Invalid input meshes")
@@ -515,7 +526,10 @@ def fullPipelineBatch(inputPath, outputPath, preProcess=True, edgePreProcessing=
         # Export as igs
         if cad:
             rs.SelectObject(cad)
-            rs.Command(f"_-Export ({igs_path}\{igs_list[i]}) Enter")
+            outputFile = os.path.join(igs_path, igs_list[i])
+            export_options = "_Version=8 _SaveSmall=No _GeometryOnly=Yes _SaveTextures=No _SaveNotes=No _SavePlugInData=No"
+            command_string = f'_-Export {export_options} "{outputFile}" _Enter _Enter'
+            rs.Command(command_string)
 
         # Print info
         stop = time.time()
@@ -524,7 +538,7 @@ def fullPipelineBatch(inputPath, outputPath, preProcess=True, edgePreProcessing=
         print(f"Progress: {progress:.2f}%")
         print(f"Previous iteration took: {(stop-start):.2f} seconds")
 
-def fullPipeline(mesh, inputPath, outputPath, prep, preProcess=True, edgePreProcessing=1, edgeConversion=2, smoothing=0, heat=False, subd=True):
+def fullPipeline(mesh, inputPath, outputPath, prep, preProcess=True, edgePreProcessing=1, edgeConversion=2, smoothing=0, heat=False, subd=True, type='1'):
     """
     Processes a single mesh through pre-processing and CAD conversion.
 
@@ -568,9 +582,9 @@ def fullPipeline(mesh, inputPath, outputPath, prep, preProcess=True, edgePreProc
         # pre-process
         shrinkWrappedMesh = PreProcessing(mesh=originalMesh, outputPath=outputPath, preProcessing=prep, saveOutput=False, resolution=edgePreProcessing, smoothing=0)
         # convert to cad
-        cad = stl2cad(shrinkWrappedMesh, edgeConversion, subd=subd)
+        cad = stl2cad(shrinkWrappedMesh, edgeConversion, subd=subd, type=type)
     else:
-        cad = stl2cad(originalMesh, edgeConversion, subd=subd)
+        cad = stl2cad(originalMesh, edgeConversion, subd=subd, type=type)
         shrinkWrappedMesh = None
 
     return originalMesh, shrinkWrappedMesh, cad
@@ -768,6 +782,50 @@ def mesh_to_subd(mesh_id):
 
 def subd_to_nurbs(subd_id):
     """
+    Convert a SubD object to NURBS using rs.Command and return the NURBS object ID.
+    Args:
+        subd_id: Rhino object ID of the SubD.
+    Returns:
+        object ID of the NURBS, or None if failed.
+    """
+    print("Converting SubD to NURBS...")
+    import rhinoscriptsyntax as rs # type: ignore
+    import Rhino.Geometry as rg # type: ignore  
+    import scriptcontext # type: ignore
+    import Rhino # type: ignore
+    import time
+
+    # Check if the object is a SubD using its object type code (262144 for SubD)
+    if not (rs.ObjectType(subd_id) == 262144):
+        print("Error: Input object ID {} is not a SubD (ObjectType: {}).".format(subd_id, rs.ObjectType(subd_id)))
+        return None
+
+    rs.SelectObject(subd_id)
+    
+    rs.Command("_-NoEcho _-ToNurbs _DeleteInput=No _Enter")
+    
+    created_ids = rs.LastCreatedObjects()
+    rs.UnselectAllObjects()
+    # Created_ids is included because the _ToNurbs command may create multiple objects
+    if not created_ids:
+        print("Error: _ToNurbs command failed to create any objects for SubD ID {}.".format(subd_id))
+        return None
+    nurbs_id = None
+    for obj_id in reversed(created_ids): # Check in reverse order of creation
+        if rs.IsBrep(obj_id) or rs.IsSurface(obj_id) or rs.IsPolysurface(obj_id): # Check if it's a NURBS type
+            nurbs_id = obj_id
+            break
+    if nurbs_id:
+        print("SubD successfully converted to NURBS object ID:", nurbs_id)
+        if scriptcontext.doc:
+            scriptcontext.doc.Views.Redraw()
+        return nurbs_id
+    else:
+        print("Error: _ToNurbs command did not result in a recognizable NURBS object for SubD ID {}.".format(subd_id))
+        return None
+
+def subd_to_nurbs_many_faces(subd_id):
+    """
     Convert a SubD object to NURBS using RhinoCommon and return the NURBS object ID.
     Args:
         subd_id: Rhino object ID of the SubD.
@@ -815,5 +873,4 @@ def subd_to_nurbs(subd_id):
     except Exception as e:
         print("An error occurred during SubD to NURBS conversion: {}".format(e))
         return None
-
 

@@ -22,12 +22,15 @@ def main():
         parser.add_argument("--output", type=str, help="Output folder, defaults to current folder if not given. Needs to alway be a folder, not a file")
         parser.add_argument("--nopreprocessing", action="store_true", help="Turns off preprocessing. If not stated, preprocessing is enabled.")
         parser.add_argument("--preprocessing", type=str, help="Type of preprocessing, either 'shrinkwrap', 'fixholes', or 'fixshell'. Defaults to 'shrinkwrap'. Does nothing if nopreprocessing is stated")
+        parser.add_argument("--smoothing", type=float, default=0, help="Sets the smoothing of the shrinkwrap function. It is advised to keep this at its default unless the input mesh has a blocky surface, since this lower the accuracy of the process.")
         parser.add_argument("--nosubd", action="store_true", help="Turns off subdivision. If not stated, subdivision is enabled.")
+        parser.add_argument("--subdtype", default='1', help="Sets the type of subd operation. '1' will result in merged faces, '2' will result in more individual faces. Defaults to '1'.")
         parser.add_argument("--quadremeshlength", type=float, help="Sets the target edge length of the quad-remesh function in millimeters. Defaults to 2mm")
         parser.add_argument("--shrinkwraplength", type=float, help="Sets the target edge length of the shrinkwrap function in millimeters. Defaults to 1mm and does nothing if a different type of preprocessing is selected.")
         parser.add_argument("--filetype", type=str, help="File type of the output. Defaults to 'igs', but can also be 'iges', 'stp', or 'step'")
         parser.add_argument("--heatmap", action="store_true", help="Generates heatmap of the distances between input and output mesh and saves it in the specified output folder. If not stated, no heatmap will be created.")
         parser.add_argument("--savedistances", action="store_true", help="If stated, calculates chamfer and hausdorff distances between input and output mesh and stores them in a csv in the output folder. It is not recommended to turn this setting on if the input folder contains a lot of files, since it is rather slow.")
+        parser.add_argument("--keepopen", action="store_true", help="If stated, keeps rhino open after the process is done. Without this flag, rhino is closed automatically.")
         parser.print_help()
         return
     
@@ -40,24 +43,28 @@ def main():
         parser.add_argument("--output", type=str, help="Output folder, defaults to current folder or input folder if not given. Needs to alway be a folder, not a file")
         parser.add_argument("--nopreprocessing", action="store_true", help="Turns off preprocessing. If not stated, preprocessing is enabled.")
         parser.add_argument("--preprocessing", default='shrinkwrap', help="Type of preprocessing, either 'shrinkwrap', 'fixholes', or 'fixshell'. Defaults to 'shrinkwrap'. Does nothing if nopreprocessing is stated")
+        parser.add_argument("--smoothing", type=float, default=0, help="Sets the smoothing of the shrinkwrap function. It is advised to keep this at its default unless the input mesh has a blocky surface, since this lower the accuracy of the process.")
         parser.add_argument("--nosubd", action="store_true", help="Turns off subdivision. If not stated, subdivision is enabled.")
+        parser.add_argument("--subdtype", default='1', help="Sets the type of subd operation. '1' will result in merged faces, '2' will result in more individual faces. Defaults to '1'.")        
         parser.add_argument("--quadremeshlength", type=float, default=2, help="Sets the target edge length of the quad-remesh function in millimeters. Defaults to 2mm")
         parser.add_argument("--shrinkwraplength", type=float, default=1, help="Sets the target edge length of the shrinkwrap function in millimeters. Defaults to 1mm and does nothing if a different type of preprocessing is selected.")
         parser.add_argument("--filetype", type=str, default='igs', help="File type of the output. Defaults to 'igs', but can also be 'iges', 'stp', or 'step'")
         parser.add_argument("--heatmap", action="store_true", help="Generates heatmap of the distances between input and output mesh and saves it in the specified output folder. If not stated, no heatmap will be created.")
         parser.add_argument("--savedistances", action="store_true", help="If stated, calculates chamfer and hausdorff distances between input and output mesh and stores them in a csv in the output folder. It is not recommended to turn this setting on if the input folder contains a lot of files, since it is rather slow.")
+        parser.add_argument("--keepopen", action="store_true", help="If stated, keeps rhino open after the process is done. Without this flag, rhino is closed automatically.")
         args, unknown = parser.parse_known_args()
 
         # Set environment variable for any args
-        os.environ["INPUT_PATH"] = args.input
+        os.environ["INPUT_PATH"] = os.path.abspath(args.input)
         if not args.output:
-            os.environ["OUTPUT_PATH"] = args.input.split('.')[0]
+            os.environ["OUTPUT_PATH"] = os.path.abspath(args.input).split('.')[0]
         else:
             os.environ["OUTPUT_PATH"] = args.output
         os.environ["PREPROCESS_TYPE"] = args.preprocessing
         os.environ["FILE_TYPE"] = args.filetype
         os.environ["QUAD_LENGTH"] = str(args.quadremeshlength)
         os.environ["SHRINK_LENGTH"] = str(args.shrinkwraplength)
+        os.environ["SUBD_TYPE"] = args.subdtype
         if args.nosubd:
             os.environ["SUBD"] = "False"
         else:
@@ -74,6 +81,12 @@ def main():
             os.environ["SAVEDIST"] = "True"
         else:
             os.environ["SAVEDIST"] = "False"
+        if args.keepopen:
+            os.environ["KEEP"] = "True"
+        else:
+            os.environ["KEEP"] = "False"
+        os.environ["SMOOTHING"] = str(args.smoothing)
+        
 
         # Debug prints
         print("Preprocessing:", os.environ.get("PREPROC_ON_OFF"))
@@ -104,8 +117,9 @@ def main():
     heat = os.environ.get("HEAT") == "True"
     preProc = os.environ.get("PREPROC_ON_OFF") == "True"
     saveDist = os.environ.get("SAVEDIST") == "True"
-
-
+    keepOpen = os.environ.get("KEEP") == "True"
+    subdType = os.environ.get("SUBD_TYPE")
+    smooth = float(os.environ.get("SMOOTHING"))
     # Execute main part of code
     import tools
 
@@ -113,48 +127,55 @@ def main():
 
         print("Single file mode")
         orgMesh = tools.importFile(inputPath)
+        import rhinoscriptsyntax as rs # type: ignore
+
         filename = os.path.splitext(os.path.basename(inputPath))[0]
         resultsPath = os.path.join(outputPath, "results")
         os.makedirs(resultsPath, exist_ok=True)
-        cadFolder = os.path.join(resultsPath, "CADModels")
-        os.makedirs(cadFolder, exist_ok=True)
-        [org, shrink, cad] = tools.fullPipeline(orgMesh, inputPath, cadFolder, prep=preProcessType, preProcess=preProc, edgePreProcessing=shrinkLength, edgeConversion=quadLength, smoothing=0, heat=heat, subd=subd)
-        if cad:
-            tools.exportMesh(cad, cadFolder, filetype, filename)
-        else:
-            print("Could not convert, quadremesh failed")
-        if heat:
-            imageFolder = os.path.join(resultsPath, "heatmapImages")
-            os.makedirs(imageFolder, exist_ok=True)
-            heatPLYFolder = os.path.join(resultsPath, "heatmapModels")
-            os.makedirs(heatPLYFolder, exist_ok=True)
-            if preProc:
-                tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
+        if os.path.splitext(os.path.basename(inputPath))[1][1:] == 'ply' or os.path.splitext(os.path.basename(inputPath))[1][1:] == 'obj' or os.path.splitext(os.path.basename(inputPath))[1][1:] == 'stl':
+            [org, shrink, cad] = tools.fullPipeline(orgMesh, inputPath, resultsPath, prep=preProcessType, preProcess=preProc, edgePreProcessing=shrinkLength, edgeConversion=quadLength, smoothing=smooth, heat=heat, subd=subd, type=subdType)
+            vol1 = rs.MeshVolume(shrink)
+            cadFolder = os.path.join(resultsPath, "CADModel")
+            os.makedirs(cadFolder, exist_ok=True)
+            if cad:
+                tools.exportMesh(cad, cadFolder, filetype, filename)
             else:
-                tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
+                print("Could not convert, quadremesh failed")
+            if heat:
+                imageFolder = os.path.join(resultsPath, "heatmapImages")
+                os.makedirs(imageFolder, exist_ok=True)
+                heatPLYFolder = os.path.join(resultsPath, "heatmapModels")
+                os.makedirs(heatPLYFolder, exist_ok=True)
+                if preProc:
+                    tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
+                else:
+                    tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
 
-        if saveDist:
-            csvFolder = os.path.join(resultsPath, "distances")
-            os.makedirs(csvFolder, exist_ok=True)
-            if preProc:
-                distances = tools.chamferDistance(shrink, cad)
-            else:
-                distances = tools.chamferDistance(org, cad)
-            csvTable = [["Filename", "Chamfer Distance", "Hausdorff Distance"]]
-            csvTable.append([filename, distances[0], distances[1]])
             if saveDist:
-                csv_output_path = os.path.join(csvFolder, "results.csv")
-                with open(csv_output_path, mode="w", newline="") as f:
-                    writer = csv.writer(f)
-                    writer.writerows(csvTable)
-        
+                csvFolder = os.path.join(resultsPath, "distances")
+                
+                os.makedirs(csvFolder, exist_ok=True)
+                if preProc:
+                    distances = tools.chamferDistance(shrink, cad)
+                else:
+                    distances = tools.chamferDistance(org, cad)
+                csvTable = [["Filename", "Chamfer Distance", "Hausdorff Distance", "Volume Original Mesh", "Volume remeshed NURBS"]]
+
+                csvTable.append([filename, distances[0], distances[1], vol1[1], distances[2][1]])
+                if saveDist:
+                    csv_output_path = os.path.join(csvFolder, "results.csv")
+                    with open(csv_output_path, mode="w", newline="") as f:
+                        writer = csv.writer(f)
+                        writer.writerows(csvTable)
+        else:
+            print("Wrong filetype, give either '.ply', '.obj', or '.stl'")
         
 
     elif len(inputPath.split('.')) == 1:
 
         print("Batch mode")
         dir_list = os.listdir(inputPath)
-        csvTable = [["Filename", "Chamfer Distance", "Hausdorff Distance"]]
+        csvTable = [["Filename", "Chamfer Distance", "Hausdorff Distance", "Conversion Time", "Volume Original Mesh", "Volume remeshed NURBS"]]
         resultsPath = os.path.join(outputPath, "results")
         os.makedirs(resultsPath, exist_ok=True)
         cadFolder = os.path.join(resultsPath, "CADModels")
@@ -170,35 +191,49 @@ def main():
             print(f"Current File: {i+1}/{len(dir_list)}")
             print("-------------------------------------")
             print("Trying to import")
-            orgMesh = tools.importFile(f"{inputPath}\{dir}")
-            print("Imported")
-            filename = dir[:-4]
-            [org, shrink, cad] = tools.fullPipeline(orgMesh, inputPath, cadFolder, prep=preProcessType, preProcess=preProc, edgePreProcessing=shrinkLength, edgeConversion=quadLength, smoothing=0, heat=heat, subd=subd) 
-            if cad:
-                tools.exportMesh(cad, cadFolder, filetype, filename)
-                if heat:
-                    if preProc:
-                        tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
-                    else:
-                        tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
-            else:
-                print("Could not convert for some reason, skipping this file...")
-            
-            # Print info
-            stop = time.time()
-            print("-------------------------------------")
-            progress = i/len(dir_list) * 100
-            print(f"Progress: {progress:.2f}%")
-            print(f"Previous iteration took: {(stop-start):.2f} seconds")
+            path = f"{inputPath}\{dir}"
+            if os.path.splitext(os.path.basename(path))[1][1:] == 'ply' or os.path.splitext(os.path.basename(path))[1][1:] == 'obj' or os.path.splitext(os.path.basename(path))[1][1:] == 'stl':
+                orgMesh = tools.importFile(f"{inputPath}\{dir}")
+                import rhinoscriptsyntax as rs # type: ignore
 
-
-        # Distance saving
-            if saveDist:
-                if preProc:
-                    distances = tools.chamferDistance(shrink, cad)
+                print("Imported")
+                filename = dir[:-4]
+                [org, shrink, cad] = tools.fullPipeline(orgMesh, inputPath, resultsPath, prep=preProcessType, preProcess=preProc, edgePreProcessing=shrinkLength, edgeConversion=quadLength, smoothing=smooth, heat=heat, subd=subd, type=subdType) 
+                vol1 = rs.MeshVolume(shrink)
+                if cad:
+                    tools.exportMesh(cad, cadFolder, filetype, filename)
+                    if heat:
+                        if preProc:
+                            tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
+                        else:
+                            tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
                 else:
-                    distances = tools.chamferDistance(org, cad)
-                csvTable.append([filename, distances[0], distances[1]])
+                    print("Could not convert for some reason, skipping this file...")
+
+                
+
+
+        # Di    stance saving
+                if saveDist:
+                    if preProc:
+                        distances = tools.chamferDistance(shrink, cad)
+                    else:
+                        distances = tools.chamferDistance(org, cad)
+                    stop = time.time()
+                    csvTable.append([filename, distances[0], distances[1], stop-start, vol1[1], distances[2][1]])
+                else:
+                    stop = time.time()
+                    
+                    
+                # Print info
+                
+                print("-------------------------------------")
+                progress = (i+1)/len(dir_list) * 100
+                print(f"Progress: {progress:.2f}%")
+                print(f"Previous iteration took: {(stop-start):.2f} seconds")
+            else:
+                print("Wrong filetype, skipping this one")
+                print(os.path.splitext(os.path.basename(inputPath))[1])
         if saveDist:
             csvFolder = os.path.join(resultsPath, "distances")
             os.makedirs(csvFolder, exist_ok=True)
@@ -214,6 +249,9 @@ def main():
 
     print("------------------")
     print("Process complete! Opening results folder")
+    if keepOpen == False:
+        import rhinoscriptsyntax as rs # type: ignore
+        rs.Command(f"_-Exit No")
     os.startfile(resultsPath)
 
 if __name__ == "__main__":

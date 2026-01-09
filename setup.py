@@ -1,6 +1,6 @@
 # setup.py
 
-from setuptools import setup, find_packages # type: ignore
+from setuptools import setup, find_packages  # type: ignore
 
 setup(
     name="rhinoMeshTools",
@@ -15,11 +15,6 @@ setup(
         "matplotlib",
     ],
     entry_points={
-        'console_scripts': [
-            'mesh2cad = rhinoMeshTools.cli_full:main',
-            'fix-mesh = rhinoMeshTools.cli_fix:main'
-        ],
+        "console_scripts": ["mesh2cad = rhinoMeshTools.cli_full:main", "fix-mesh = rhinoMeshTools.cli_fix:main"],
     },
 )
-
-

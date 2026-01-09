@@ -1,6 +1,7 @@
 import unittest
 import argparse
 
+
 # Simulated function for argument parsing (replace with your actual CLI parsing logic)
 def parse_arguments(args):
     """
@@ -15,9 +16,10 @@ def parse_arguments(args):
     parser.add_argument("--edgelength", type=float, default=1, help="Target edge length for shrinkwrap.")
     parser.add_argument("--keepopen", action="store_true", help="Keeps Rhino open after the process is done.")
     parser.add_argument("--nosubd", action="store_true", help="Turns off subdivision.")
-    parser.add_argument("--subdtype", type=str, default='1', help="Type of subdivision operation.")
-    parser.add_argument("--filetype", type=str, default='igs', help="File type of the output.")
+    parser.add_argument("--subdtype", type=str, default="1", help="Type of subdivision operation.")
+    parser.add_argument("--filetype", type=str, default="igs", help="File type of the output.")
     return parser.parse_args(args)
+
 
 class TestCLIArgumentParsing(unittest.TestCase):
     def test_valid_arguments(self):
@@ -26,7 +28,7 @@ class TestCLIArgumentParsing(unittest.TestCase):
             ["fix-mesh", "--input", "C:\\temp\\file.ply", "--output", "C:\\output"],
             ["fix-mesh", "--input", "relative_path\\file.obj", "--preprocessing", "shrinkwrap"],
             ["fix-mesh", "--input", "C:\\temp\\file.ply", "--smoothing", "5", "--edgelength", "2"],
-            ["full-pipeline", "--input", "C:\\temp\\file.ply", "--output", "C:\\output", "--filetype", "step"]
+            ["full-pipeline", "--input", "C:\\temp\\file.ply", "--output", "C:\\output", "--filetype", "step"],
         ]
         for args in valid_args:
             with self.subTest(args=args):
@@ -71,6 +73,7 @@ class TestCLIArgumentParsing(unittest.TestCase):
         args = ["full-pipeline", "--input", "C:\\temp\\file.ply", "--filetype", "step"]
         parsed_args = parse_arguments(args)
         self.assertEqual(parsed_args.filetype, "step", "Filetype should be parsed correctly.")
+
 
 if __name__ == "__main__":
     unittest.main()

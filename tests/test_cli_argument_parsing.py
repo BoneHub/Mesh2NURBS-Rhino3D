@@ -55,7 +55,18 @@ class TestCLIArgumentParsing(unittest.TestCase):
 
     def test_optional_arguments(self):
         """Test optional arguments."""
-        args = ["fix-mesh", "--input", "C:\\temp\\file.ply", "--output", "C:\\output", "--smoothing", "5", "--edgelength", "2", "--keepopen"]
+        args = [
+            "fix-mesh",
+            "--input",
+            "C:\\temp\\file.ply",
+            "--output",
+            "C:\\output",
+            "--smoothing",
+            "5",
+            "--edgelength",
+            "2",
+            "--keepopen",
+        ]
         parsed_args = parse_arguments(args)
         self.assertEqual(parsed_args.smoothing, 5, "Smoothing value should be parsed correctly.")
         self.assertEqual(parsed_args.edgelength, 2, "Edge length value should be parsed correctly.")

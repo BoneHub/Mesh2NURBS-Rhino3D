@@ -28,6 +28,26 @@ def _running_in_cli():
 if not _running_inside_rhino() and not _running_in_cli():
     _auto_start()
 
-from .tools import importFile, fullPipeline, fullPipelineBatch, heatmap, PreProcessing, chamferDistance, deleteNonsense, meshDistanceCalculator, stl2cad, exportMesh
+from .tools import (
+    importFile,
+    fullPipeline,
+    fullPipelineBatch,
+    heatmap,
+    PreProcessing,
+    chamferDistance,
+    deleteNonsense,
+    meshDistanceCalculator,
+    stl2cad,
+    exportMesh,
+)
 
-__all__ = ["fullPipeline", "deleteNonsense", "PreProcessing", "stl2cad", "meshDistanceCalculator", "chamferDistance", "importFile", "exportMesh"]
+__all__ = [
+    "fullPipeline",
+    "deleteNonsense",
+    "PreProcessing",
+    "stl2cad",
+    "meshDistanceCalculator",
+    "chamferDistance",
+    "importFile",
+    "exportMesh",
+]

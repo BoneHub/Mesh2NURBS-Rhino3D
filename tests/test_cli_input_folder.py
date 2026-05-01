@@ -5,7 +5,12 @@ import tempfile
 
 def run_cli(input_path):
     """Helper function to run the CLI script"""
-    return subprocess.run(["python", "rhinoMeshTools/cli_full.py", "--input", input_path, "--keepopen"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    return subprocess.run(
+        ["python", "rhinoMeshTools/cli_full.py", "--input", input_path, "--keepopen"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
 
 
 def test_empty_folder_does_not_crash():
@@ -22,8 +27,7 @@ def test_invalid_file_in_folder_skips_gracefully():
             f.write("Not a real mesh file")
         valid_path = os.path.join(tmpdir, "mesh.obj")
         with open(valid_path, "w") as b:
-            b.write(
-                """
+            b.write("""
                     v 0 0 0
                     v 1 0 0
                     v 1 1 0
@@ -38,8 +42,7 @@ def test_invalid_file_in_folder_skips_gracefully():
                     f 2 6 7 3
                     f 1 2 6 5
                     f 4 3 7 8
-                    """
-            )
+                    """)
         result = run_cli(tmpdir)
         assert result.returncode == 0
         output_dir = os.path.join(tmpdir, "results\\CADModels")

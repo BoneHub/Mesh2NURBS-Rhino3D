@@ -46,7 +46,9 @@ class TestInputPath(unittest.TestCase):
             with self.subTest(path=p):
                 processed_path = process_cli_input_path(p)
                 self.assertIsNotNone(processed_path, f"Path '{p}' should be accepted and processed.")
-                self.assertTrue(os.path.isabs(processed_path), f"Processed path '{processed_path}' for '{p}' should be absolute.")
+                self.assertTrue(
+                    os.path.isabs(processed_path), f"Processed path '{processed_path}' for '{p}' should be absolute."
+                )
 
     def test_valid_paths_with_spaces(self):
         """Test paths with spaces that should be accepted."""
@@ -59,19 +61,32 @@ class TestInputPath(unittest.TestCase):
             "..\\parent folder with spaces\\data file.ply",
         ]
         if platform.system() != "Windows":
-            paths.extend(["/home/user/my documents/project report.docx", "some dir with spaces/another file with spaces.txt", "../parent dir with spaces/resource file.dat"])
+            paths.extend(
+                [
+                    "/home/user/my documents/project report.docx",
+                    "some dir with spaces/another file with spaces.txt",
+                    "../parent dir with spaces/resource file.dat",
+                ]
+            )
 
         for p in paths:
             with self.subTest(path=p):
                 processed_path = process_cli_input_path(p)
                 self.assertIsNotNone(processed_path, f"Path '{p}' with spaces should be accepted and processed.")
-                self.assertTrue(os.path.isabs(processed_path), f"Processed path '{processed_path}' for '{p}' should be absolute.")
+                self.assertTrue(
+                    os.path.isabs(processed_path), f"Processed path '{processed_path}' for '{p}' should be absolute."
+                )
                 if " " in p:
                     # Check that spaces are preserved in the output path.
                     # This is a basic check; abspath normalizes paths, but spaces in names should remain.
-                    original_name_part_with_space = next((part for part in p.replace("\\", "/").split("/") if " " in part), None)
+                    original_name_part_with_space = next(
+                        (part for part in p.replace("\\", "/").split("/") if " " in part), None
+                    )
                     if original_name_part_with_space:
-                        self.assertTrue(original_name_part_with_space in processed_path.replace("\\", "/"), f"Path component with spaces from '{p}' seems altered in '{processed_path}'")
+                        self.assertTrue(
+                            original_name_part_with_space in processed_path.replace("\\", "/"),
+                            f"Path component with spaces from '{p}' seems altered in '{processed_path}'",
+                        )
 
     def test_empty_or_invalid_type_paths(self):
         """Test paths that are empty or of invalid type."""
@@ -105,7 +120,10 @@ class TestInputPath(unittest.TestCase):
                     # Check that the problematic character is still in the processed path
                     problem_char = next((char for char in ["<", ">", "?", "*", "|", '"'] if char in p), None)
                     if problem_char:
-                        self.assertTrue(problem_char in processed_path, f"Problematic char '{problem_char}' from '{p}' should be in processed path '{processed_path}'.")
+                        self.assertTrue(
+                            problem_char in processed_path,
+                            f"Problematic char '{problem_char}' from '{p}' should be in processed path '{processed_path}'.",
+                        )
         # Add specific tests for other OS if needed, as character validity rules differ.
 
 

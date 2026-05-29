@@ -1,13 +1,8 @@
 #! python3
-# r: numpy
-# r: vedo
-# r: point_cloud_utils
-# r: pandas
-# r: matplotlib
-# r: scipy
 
 import sys
 import os
+import subprocess
 import argparse
 
 
@@ -105,7 +100,7 @@ def main():
         rhinoExePath = "C:\\Program Files\\Rhino 8\\System\\Rhino.exe"
         print("Launching Rhino...")
         command = f'"{rhinoExePath}" /nosplash /runscript="_-RunPythonScript ({scriptToRun})"'
-        os.system(f'"{command}"')
+        subprocess.run(command)
 
         return
 
@@ -166,7 +161,7 @@ def main():
     if keepOpen == False:
         import rhinoscriptsyntax as rs  # type: ignore
 
-        rs.Command(f"_-Exit No")
+        rs.Command("_-Exit No")
     os.startfile(resultsPath)
 
 

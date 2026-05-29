@@ -1,14 +1,8 @@
 #! python3
-# r: numpy
-# r: vedo
-# r: point_cloud_utils
-# r: pandas
-# r: matplotlib
-# r: scipy
-
 
 import sys
 import os
+import subprocess
 import argparse
 import csv
 import time
@@ -22,7 +16,6 @@ def main():
     parser.add_argument(
         "--input",
         type=str,
-        default=os.getcwd(),
         help="Path to the input file or folder, defaults to current folder if not given, If folder is given, all files in that folder will be processed",
     )
     parser.add_argument(
@@ -83,16 +76,29 @@ def main():
         action="store_true",
         help="If stated, keeps rhino open after the process is done. Without this flag, rhino is closed automatically.",
     )
-    # Show help without launching Rhino
-    # if "--help" in sys.argv or "-h" in sys.argv:
-    #     parser.print_help()
-    #     return
-
+    parser.add_argument(
+        "--openresults",
+        action="store_true",
+        help="If stated, opens the results folder after the process is done. If not stated, the results folder is not opened automatically.",
+    )
+    parser.add_argument(
+        "--printenv",
+        action="store_true",
+        help="If stated, prints the environment variables that are set for the rhino script. This is useful for debugging purposes.",
+    )
+    rhino_is_running = True
+    try:
+        import rhinoscriptsyntax as rs
+    except ImportError:
+        rhino_is_running = False
     # Launch rhino if not launched already
-    if "Rhino.exe" not in sys.executable:
+    if not rhino_is_running:
         args = parser.parse_args()
         # Set environment variable for any args
-        os.environ["INPUT_PATH"] = os.path.abspath(args.input)
+        if not args.input:
+            os.environ["INPUT_PATH"] = os.path.abspath(os.getcwd())
+        else:
+            os.environ["INPUT_PATH"] = os.path.abspath(args.input)
         if not args.output:
             os.environ["OUTPUT_PATH"] = os.path.abspath(args.input).split(".")[0]
         else:
@@ -122,24 +128,27 @@ def main():
             os.environ["KEEP"] = "True"
         else:
             os.environ["KEEP"] = "False"
+        if args.openresults:
+            os.environ["OPENRESULTS"] = "True"
+        else:
+            os.environ["OPENRESULTS"] = "False"
         os.environ["SMOOTHING"] = str(args.smoothing)
 
         # Debug prints
-        print("Preprocessing:", os.environ.get("PREPROC_ON_OFF"))
-        print("Heatmap:", os.environ.get("HEAT"))
-        print("Subd:", os.environ.get("SUBD"))
-        print("Distances:", os.environ.get("SAVEDIST"))
-        print("QuadRemesh Length:", os.environ.get("QUAD_LENGTH"))
-        print("ShrinkWrap Length:", os.environ.get("SHRINK_LENGTH"))
-        print("Output folder:", os.environ.get("OUTPUT_PATH"))
-
+        if args.printenv:
+            print("Preprocessing:", os.environ.get("PREPROC_ON_OFF"))
+            print("Heatmap:", os.environ.get("HEAT"))
+            print("Subd:", os.environ.get("SUBD"))
+            print("Distances:", os.environ.get("SAVEDIST"))
+            print("QuadRemesh Length:", os.environ.get("QUAD_LENGTH"))
+            print("ShrinkWrap Length:", os.environ.get("SHRINK_LENGTH"))
+            print("Output folder:", os.environ.get("OUTPUT_PATH"))
         # Launch Rhino and run script
         scriptToRun = os.path.abspath(__file__)
         rhinoExePath = "C:\\Program Files\\Rhino 8\\System\\Rhino.exe"
         command = f'"{rhinoExePath}" /nosplash /runscript="_-RunPythonScript ({scriptToRun})"'
         print("Launching Rhino...")
-        os.system(f'"{command}"')
-
+        subprocess.run(command)
         return
 
     # Retrieve args from environment variables
@@ -154,8 +163,10 @@ def main():
     preProc = os.environ.get("PREPROC_ON_OFF") == "True"
     saveDist = os.environ.get("SAVEDIST") == "True"
     keepOpen = os.environ.get("KEEP") == "True"
+    openResults = os.environ.get("OPENRESULTS") == "True"
     subdType = os.environ.get("SUBD_TYPE")
     smooth = float(os.environ.get("SMOOTHING"))
+
     # Execute main part of code
     import tools
 
@@ -163,67 +174,62 @@ def main():
 
         print("Single file mode")
         orgMesh = tools.importFile(inputPath)
-        import rhinoscriptsyntax as rs  # type: ignore
 
         filename = os.path.splitext(os.path.basename(inputPath))[0]
         resultsPath = os.path.join(outputPath, "results")
         os.makedirs(resultsPath, exist_ok=True)
-        if (
-            os.path.splitext(os.path.basename(inputPath))[1][1:] == "ply"
-            or os.path.splitext(os.path.basename(inputPath))[1][1:] == "obj"
-            or os.path.splitext(os.path.basename(inputPath))[1][1:] == "stl"
-        ):
-            [org, shrink, cad] = tools.fullPipeline(
-                orgMesh,
-                inputPath,
-                resultsPath,
-                prep=preProcessType,
-                preProcess=preProc,
-                edgePreProcessing=shrinkLength,
-                edgeConversion=quadLength,
-                smoothing=smooth,
-                heat=heat,
-                subd=subd,
-                type=subdType,
-            )
-            cadFolder = os.path.join(resultsPath, "CADModel")
-            os.makedirs(cadFolder, exist_ok=True)
-            if cad:
-                tools.exportMesh(cad, cadFolder, filetype, filename)
-            else:
-                print("Could not convert, quadremesh failed")
-            if heat:
-                imageFolder = os.path.join(resultsPath, "heatmapImages")
-                os.makedirs(imageFolder, exist_ok=True)
-                heatPLYFolder = os.path.join(resultsPath, "heatmapModels")
-                os.makedirs(heatPLYFolder, exist_ok=True)
-                if preProc:
-                    tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
-                else:
-                    tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
-
-            if saveDist:
-                csvFolder = os.path.join(resultsPath, "distances")
-
-                os.makedirs(csvFolder, exist_ok=True)
-                if preProc:
-                    distances = tools.chamferDistance(shrink, cad)
-                    vol1 = rs.MeshVolume(shrink)
-                else:
-                    distances = tools.chamferDistance(org, cad)
-                    vol1 = rs.MeshVolume(org)
-                csvTable = [
-                    ["Filename", "Chamfer Distance", "Hausdorff Distance", "Volume Original Mesh", "Volume remeshed NURBS"]
-                ]
-
-                csvTable.append([filename, distances[0], distances[1], vol1[1], distances[2][1]])
-                if saveDist:
-                    csv_output_path = os.path.join(csvFolder, "results.csv")
-                    with open(csv_output_path, mode="w", newline="") as f:
-                        writer = csv.writer(f)
-                        writer.writerows(csvTable)
+        inputype = os.path.splitext(os.path.basename(inputPath))[1][1:]
+        if not (inputype == "ply" or inputype == "obj" or inputype == "stl"):
+            raise ValueError("Wrong filetype, give either '.ply', '.obj', or '.stl'")
+        [org, shrink, cad] = tools.fullPipeline(
+            orgMesh,
+            # inputPath,
+            resultsPath,
+            prep=preProcessType,
+            preProcess=preProc,
+            edgePreProcessing=shrinkLength,
+            edgeConversion=quadLength,
+            smoothing=smooth,
+            # heat=heat,
+            subd=subd,
+            type=subdType,
+        )
+        cadFolder = os.path.join(resultsPath, "CADModel")
+        os.makedirs(cadFolder, exist_ok=True)
+        if cad:
+            tools.exportMesh(cad, cadFolder, filetype, filename)
         else:
-            print("Wrong filetype, give either '.ply', '.obj', or '.stl'")
+            print("Could not convert, quadremesh failed")
+        if heat:
+            imageFolder = os.path.join(resultsPath, "heatmapImages")
+            os.makedirs(imageFolder, exist_ok=True)
+            heatPLYFolder = os.path.join(resultsPath, "heatmapModels")
+            os.makedirs(heatPLYFolder, exist_ok=True)
+            if preProc:
+                tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
+            else:
+                tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
+
+        if saveDist:
+            csvFolder = os.path.join(resultsPath, "distances")
+
+            os.makedirs(csvFolder, exist_ok=True)
+            if preProc:
+                distances = tools.chamferDistance(shrink, cad)
+                vol1 = rs.MeshVolume(shrink)
+            else:
+                distances = tools.chamferDistance(org, cad)
+                vol1 = rs.MeshVolume(org)
+            csvTable = [
+                ["Filename", "Chamfer Distance", "Hausdorff Distance", "Volume Original Mesh", "Volume remeshed NURBS"]
+            ]
+
+            csvTable.append([filename, distances[0], distances[1], vol1[1], distances[2][1]])
+            if saveDist:
+                csv_output_path = os.path.join(csvFolder, "results.csv")
+                with open(csv_output_path, mode="w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerows(csvTable)
 
     elif len(inputPath.split(".")) == 1:
 
@@ -255,61 +261,57 @@ def main():
             print("-------------------------------------")
             print("Trying to import")
             path = f"{inputPath}\{dir}"
-            if (
-                os.path.splitext(os.path.basename(path))[1][1:] == "ply"
-                or os.path.splitext(os.path.basename(path))[1][1:] == "obj"
-                or os.path.splitext(os.path.basename(path))[1][1:] == "stl"
-            ):
-                orgMesh = tools.importFile(f"{inputPath}\{dir}")
-                import rhinoscriptsyntax as rs  # type: ignore
+            inputype = os.path.splitext(os.path.basename(path))[1][1:]
+            if not (inputype == "ply" or inputype == "obj" or inputype == "stl"):
+                raise ValueError("Wrong filetype, give either '.ply', '.obj', or '.stl'")
+            
+            orgMesh = tools.importFile(path)
+            import rhinoscriptsyntax as rs  # type: ignore
 
-                print("Imported")
-                filename = dir[:-4]
-                [org, shrink, cad] = tools.fullPipeline(
-                    orgMesh,
-                    inputPath,
-                    resultsPath,
-                    prep=preProcessType,
-                    preProcess=preProc,
-                    edgePreProcessing=shrinkLength,
-                    edgeConversion=quadLength,
-                    smoothing=smooth,
-                    heat=heat,
-                    subd=subd,
-                    type=subdType,
-                )
-                if cad:
-                    tools.exportMesh(cad, cadFolder, filetype, filename)
-                    if heat:
-                        if preProc:
-                            tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
-                        else:
-                            tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
-                else:
-                    print("Could not convert for some reason, skipping this file...")
-
-                # Di    stance saving
-                if saveDist:
+            print("Imported")
+            filename = dir[:-4]
+            [org, shrink, cad] = tools.fullPipeline(
+                orgMesh,
+                # inputPath,
+                resultsPath,
+                prep=preProcessType,
+                preProcess=preProc,
+                edgePreProcessing=shrinkLength,
+                edgeConversion=quadLength,
+                smoothing=smooth,
+                # heat=heat,
+                subd=subd,
+                type=subdType,
+            )
+            if cad:
+                tools.exportMesh(cad, cadFolder, filetype, filename)
+                if heat:
                     if preProc:
-                        distances = tools.chamferDistance(shrink, cad)
-                        vol1 = rs.MeshVolume(shrink)
+                        tools.heatmap(shrink, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
                     else:
-                        distances = tools.chamferDistance(org, cad)
-                        vol1 = rs.MeshVolume(org)
-                    stop = time.time()
-                    csvTable.append([filename, distances[0], distances[1], stop - start, vol1[1], distances[2][1]])
-                else:
-                    stop = time.time()
-
-                # Print info
-
-                print("-------------------------------------")
-                progress = (i + 1) / len(dir_list) * 100
-                print(f"Progress: {progress:.2f}%")
-                print(f"Previous iteration took: {(stop-start):.2f} seconds")
+                        tools.heatmap(org, cad, inputPath, imageFolder, heatPLYFolder, shrinkLength, filename=filename)
             else:
-                print("Wrong filetype, skipping this one")
-                print(os.path.splitext(os.path.basename(inputPath))[1])
+                print("Could not convert for some reason, skipping this file...")
+
+            # Distance saving
+            if saveDist:
+                if preProc:
+                    distances = tools.chamferDistance(shrink, cad)
+                    vol1 = rs.MeshVolume(shrink)
+                else:
+                    distances = tools.chamferDistance(org, cad)
+                    vol1 = rs.MeshVolume(org)
+                stop = time.time()
+                csvTable.append([filename, distances[0], distances[1], stop - start, vol1[1], distances[2][1]])
+            else:
+                stop = time.time()
+
+            # Print info
+            print("-------------------------------------")
+            progress = (i + 1) / len(dir_list) * 100
+            print(f"Progress: {progress:.2f}%")
+            print(f"Previous iteration took: {stop-start:.2f} seconds")
+            break
         if saveDist:
             csvFolder = os.path.join(resultsPath, "distances")
             os.makedirs(csvFolder, exist_ok=True)
@@ -322,11 +324,11 @@ def main():
     print("------------------")
     print("Process complete! Opening results folder")
     if keepOpen == False:
-        import rhinoscriptsyntax as rs  # type: ignore
-
-        rs.Command(f"_-Exit No")
-    os.startfile(resultsPath)
-
+        import rhinoscriptsyntax as rs
+        rs.Command("_-Exit No")
+    
+    if openResults:
+        os.startfile(resultsPath)
 
 if __name__ == "__main__":
     main()

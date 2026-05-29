@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "mesh2nurbs_rhino3d"
 version = "0.2"
 dependencies = [
-    "numpy==1.26.4",
-    "scipy",
-    "point_cloud_utils",
-    "pandas",
-    "vedo",
-    "matplotlib",
+    # "numpy==1.26.4",
+    # "scipy",
+    # "point_cloud_utils",
+    # "pandas",
+    # "vedo",
+    # "matplotlib",
 ]
 
 [project.scripts]

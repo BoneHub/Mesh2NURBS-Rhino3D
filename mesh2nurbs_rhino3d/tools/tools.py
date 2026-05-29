@@ -1,26 +1,3 @@
-#! python3
-
-
-def importer():
-    """Imports necessary libraries for the script."""
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
-
-
 def PreProcessing(
     mesh,
     outputPath,
@@ -50,22 +27,7 @@ def PreProcessing(
     Returns:
         The processed mesh object, or None if processing fails.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+    import rhinoscriptsyntax as rs
 
     obj1 = mesh
     rs.SelectObject(obj1)
@@ -73,10 +35,10 @@ def PreProcessing(
         rs.Command(
             f"_-NoEcho _-ShrinkWrap Resolution={resolution} Offset=0 Smooth={smoothing} PolygonOptimize=0 FillHoles=On VertexColors=Off DeleteInput={deleteInput} Preview=Off DrawWires=On HideInput=Off Enter"
         )
-        rs.Command(f"_SelLast")
+        rs.Command("_SelLast")
         obj2 = rs.SelectedObjects()[0]
-        rs.Command(f"_Invert ")
-        rs.Command(f"_Delete ")
+        rs.Command("_Invert ")
+        rs.Command("_Delete ")
     elif preProcessing == "fixholes":
         rs.Command("_-FillMeshHoles Enter")
         rs.Command("_-SelAll Enter")
@@ -114,22 +76,8 @@ def exportMesh(mesh, outputPath, fileType, fileName):
         fileType (str): The desired file type (e.g., 'igs', 'step').
         fileName (str): The name for the exported file.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
+    import rhinoscriptsyntax as rs
     import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
 
     rs.SelectObject(mesh)
     if fileType == "igs" or fileType == "iges" or fileType == "step" or fileType == "stp" or fileType == "ply":
@@ -158,22 +106,7 @@ def stl2cad(mesh, targetEdgeLength=2, adaptiveSize=100, deleteInputs=True, subd=
     Returns:
         The converted CAD object (NURBS or SubD), or None if conversion fails.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+    import rhinoscriptsyntax as rs
 
     shrink = mesh
     retry = True
@@ -190,7 +123,7 @@ def stl2cad(mesh, targetEdgeLength=2, adaptiveSize=100, deleteInputs=True, subd=
             rs.Command("_SelLast")
             if not subd:
                 rs.Command("_-NoEcho _-ToNurbs DeleteInputObjects=No Enter")  # convert subD to nurbs
-                rs.Command(f"_SelLast ")
+                rs.Command("_SelLast ")
                 outMesh = rs.SelectedObjects()[0]
                 if deleteInputs == True:
                     rs.DeleteObject(quad)
@@ -221,22 +154,10 @@ def meshDistanceCalculator(mesh1, mesh2):
         list: A list of distances for each face center of mesh2 that intersected mesh1.
               None is appended if no intersection or intersection is beyond cutoff.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+    import rhinoscriptsyntax as rs
+    import Rhino.Geometry as rg
+    import numpy as np
+
 
     id1 = mesh1
     id2 = mesh2
@@ -337,7 +258,7 @@ def meshDistanceCalculator(mesh1, mesh2):
 
             else:
                 dist.append(None)
-        print(f"{i}/{len(centers2)}")
+        print(f"Progress: {i+1}/{len(centers2)}")
 
     # outputs
     print("Average error is ", str(np.average([i for i in dist if i is not None])), "mm")
@@ -357,27 +278,11 @@ def meshDistanceCalculator(mesh1, mesh2):
 
 def deleteNonsense():
     """Allows the user to select a mesh to keep and deletes all other objects."""
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+    import rhinoscriptsyntax as rs
 
     rs.GetObjects("Select mesh you want to keep", 32, True, False, True, None, 1, 0, None)
-    rs.Command(f"_-Invert ")
-    rs.Command(f"_-Delete ")
-    return
+    rs.Command("_-Invert ")
+    rs.Command("_-Delete ")
 
 
 def chamferDistance(mesh1, mesh2, quads=True):
@@ -394,29 +299,16 @@ def chamferDistance(mesh1, mesh2, quads=True):
         list: A list containing Chamfer distance and Hausdorff distance,
               or [None, None] if input meshes are invalid.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+    import rhinoscriptsyntax as rs
+    import numpy as np
+    import point_cloud_utils as pcu
 
     dist = []
     id1 = mesh1
     id2 = mesh2
     rs.SelectObject(id2)
     rs.Command("_-NoEcho _-Mesh DetailedOptions=Yes JaggedSeams=No SimplePlane=No Refine=Yes PackTextures=No Enter")
-    rs.Command(f"_SelLast ")
+    rs.Command("_SelLast ")
     id2 = rs.SelectedObjects()[0]
     print("Computing distances...")
     if quads == True:
@@ -483,29 +375,15 @@ def importFile(inputPath):
     Returns:
         The imported mesh object (last object created).
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+    import rhinoscriptsyntax as rs
+    import Rhino
 
     # Open new file
-    rs.Command(f"_-NoEcho _-New No None Enter")
+    rs.Command("_-NoEcho _-New No None Enter")
     path = inputPath
     file = f'_-Import "{path}" Enter'
     Rhino.RhinoApp.RunScript(file, False)
-    rs.Command(f"_SelLast")
+    rs.Command("_SelLast")
     originalMesh = rs.LastObject()
     return originalMesh
 
@@ -522,22 +400,10 @@ def fullPipelineBatch(inputPath, outputPath, preProcess=True, edgePreProcessing=
         edgeConversion (int, optional): Target edge length for stl2cad conversion. Defaults to 2.
         smoothing (int, optional): Smoothing iterations for pre-processing. Defaults to 0.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
+    import rhinoscriptsyntax as rs
+    import scriptcontext
     import time
-    import point_cloud_utils as pcu  # type: ignore
     import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
 
     input_stl_path = inputPath
     igs_path = outputPath
@@ -585,14 +451,12 @@ def fullPipelineBatch(inputPath, outputPath, preProcess=True, edgePreProcessing=
 
 def fullPipeline(
     mesh,
-    inputPath,
     outputPath,
     prep,
     preProcess=True,
     edgePreProcessing=1,
     edgeConversion=2,
     smoothing=0,
-    heat=False,
     subd=True,
     type="1",
 ):
@@ -601,35 +465,19 @@ def fullPipeline(
 
     Args:
         mesh: The input mesh object.
-        inputPath (str): Path of the input file (used for naming in heatmap).
         outputPath (str): Path to the directory for potential outputs.
         prep (str): The type of pre-processing to apply (e.g., 'shrinkwrap').
         preProcess (bool, optional): Whether to perform pre-processing. Defaults to True.
         edgePreProcessing (int, optional): Resolution for pre-processing. Defaults to 1.
         edgeConversion (int, optional): Target edge length for stl2cad conversion. Defaults to 2.
         smoothing (int, optional): Smoothing iterations for pre-processing. Defaults to 0.
-        heat (bool, optional): Placeholder for heatmap generation (not fully implemented in this function). Defaults to False.
         subd (bool, optional): Whether to use SubD in the stl2cad conversion. Defaults to True.
 
     Returns:
         tuple: A tuple containing the original mesh, the shrink-wrapped mesh (or None), and the CAD object.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+
+    import scriptcontext
 
     scriptcontext.doc.Views.RedrawEnabled = False
 
@@ -642,7 +490,7 @@ def fullPipeline(
             preProcessing=prep,
             saveOutput=False,
             resolution=edgePreProcessing,
-            smoothing=0,
+            smoothing=smoothing,
         )
         # convert to cad
         cad = stl2cad(shrinkWrappedMesh, edgeConversion, subd=subd, type=type)
@@ -669,29 +517,18 @@ def heatmap(mesh1, mesh2, inputPath, outputPath, plyPath, edgeConversion=2, quad
         quads (bool, optional): Indicates if meshes are primarily quads for face extraction. Defaults to True.
         filename (str, optional): Custom filename for outputs. If None, derived from inputPath. Defaults to None.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
+    import rhinoscriptsyntax as rs
+    import numpy as np
     import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
+    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly
+    from scipy.spatial import KDTree
 
     nurbsMesh = mesh2
     shrinkWrappedMesh = mesh1
 
     rs.SelectObject(nurbsMesh)
     rs.Command("_-NoEcho _-Mesh DetailedOptions=Yes JaggedSeams=No SimplePlane=No Refine=Yes PackTextures=No Enter")
-    rs.Command(f"_SelLast ")
+    rs.Command("_SelLast ")
     nurbsMesh = rs.SelectedObjects()[0]
 
     print("Creating heatmap...")
@@ -810,22 +647,8 @@ def mesh_to_subd(mesh_id):
     Returns:
         object ID of the SubD, or None if failed.
     """
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
+    import rhinoscriptsyntax as rs
     import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
 
     print("Converting mesh to SubD...")
     rs.SelectObject(mesh_id)
@@ -854,11 +677,8 @@ def subd_to_nurbs(subd_id):
         object ID of the NURBS, or None if failed.
     """
     print("Converting SubD to NURBS...")
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import time
+    import rhinoscriptsyntax as rs
+    import scriptcontext
 
     # Check if the object is a SubD using its object type code (262144 for SubD)
     if not (rs.ObjectType(subd_id) == 262144):
@@ -899,23 +719,10 @@ def subd_to_nurbs_many_faces(subd_id):
         object ID of the NURBS, or None if failed.
     """
     print("Converting SubD to NURBS using RhinoCommon...")
-    import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino.Geometry as rg  # type: ignore
-    import scriptcontext  # type: ignore
-    import Rhino  # type: ignore
-    import numpy as np  # type: ignore
-    import time
-    import point_cloud_utils as pcu  # type: ignore
-    import os
-    import csv
-    import shutil
-    import pandas as pd  # type: ignore
-    from vedo import Points, show, Plotter, Sphere, Text2D, settings, write, Assembly  # type: ignore
-    import matplotlib.colors as mcolors  # type: ignore
-    import matplotlib.cm as cm  # type: ignore
-    import matplotlib.pyplot as plt_mpl  # type: ignore
-    from scipy.spatial import KDTree  # type: ignore
-    import System  # type: ignore
+    import rhinoscriptsyntax as rs
+    import scriptcontext
+    import Rhino
+    import System
 
     try:
         subd_geometry = rs.coercegeometry(subd_id)

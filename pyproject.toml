@@ -10,8 +10,8 @@ dependencies = [
     "scipy",
     "point_cloud_utils",
     "pandas",
-    # "vedo",
-    # "matplotlib",
+    "vedo",
+    "matplotlib",
 ]
 
 [project.scripts]

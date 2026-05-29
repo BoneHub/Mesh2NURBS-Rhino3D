@@ -7,11 +7,11 @@ name = "mesh2nurbs_rhino3d"
 version = "0.2"
 dependencies = [
     "numpy==1.26.4",
-    "scipy==1.13.1",
+    "scipy",
     "point_cloud_utils",
     "pandas",
-    "vedo",
-    "matplotlib",
+    # "vedo",
+    # "matplotlib",
 ]
 
 [project.scripts]

@@ -16,144 +16,81 @@ import time
 
 def main():
 
+    parser = argparse.ArgumentParser(
+        description="Launches Rhino and converts the given mesh file(s) to a CAD format. All options below are optional, the command works as long as the current working directory only contains mesh files"
+    )
+    parser.add_argument(
+        "--input",
+        type=str,
+        default=os.getcwd(),
+        help="Path to the input file or folder, defaults to current folder if not given, If folder is given, all files in that folder will be processed",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        help="Output folder, defaults to current folder or input folder if not given. Needs to alway be a folder, not a file",
+    )
+    parser.add_argument(
+        "--nopreprocessing", action="store_true", help="Turns off preprocessing. If not stated, preprocessing is enabled."
+    )
+    parser.add_argument(
+        "--preprocessing",
+        default="shrinkwrap",
+        help="Type of preprocessing, either 'shrinkwrap', 'fixholes', or 'fixshell'. Defaults to 'shrinkwrap'. Does nothing if nopreprocessing is stated",
+    )
+    parser.add_argument(
+        "--smoothing",
+        type=float,
+        default=0,
+        help="Sets the smoothing of the shrinkwrap function. It is advised to keep this at its default unless the input mesh has a blocky surface, since this lower the accuracy of the process.",
+    )
+    parser.add_argument("--nosubd", action="store_true", help="Turns off subdivision. If not stated, subdivision is enabled.")
+    parser.add_argument(
+        "--subdtype",
+        default="1",
+        help="Sets the type of subd operation. '1' will result in merged faces, '2' will result in more individual faces. Defaults to '1'.",
+    )
+    parser.add_argument(
+        "--quadremeshlength",
+        type=float,
+        default=2,
+        help="Sets the target edge length of the quad-remesh function in millimeters. Defaults to 2mm",
+    )
+    parser.add_argument(
+        "--shrinkwraplength",
+        type=float,
+        default=1,
+        help="Sets the target edge length of the shrinkwrap function in millimeters. Defaults to 1mm and does nothing if a different type of preprocessing is selected.",
+    )
+    parser.add_argument(
+        "--filetype",
+        type=str,
+        default="igs",
+        help="File type of the output. Defaults to 'igs', but can also be 'iges', 'stp', or 'step'",
+    )
+    parser.add_argument(
+        "--heatmap",
+        action="store_true",
+        help="Generates heatmap of the distances between input and output mesh and saves it in the specified output folder. If not stated, no heatmap will be created.",
+    )
+    parser.add_argument(
+        "--savedistances",
+        action="store_true",
+        help="If stated, calculates chamfer and hausdorff distances between input and output mesh and stores them in a csv in the output folder. It is not recommended to turn this setting on if the input folder contains a lot of files, since it is rather slow.",
+    )
+    parser.add_argument(
+        "--keepopen",
+        action="store_true",
+        help="If stated, keeps rhino open after the process is done. Without this flag, rhino is closed automatically.",
+    )
     # Show help without launching Rhino
-    if "--help" in sys.argv or "-h" in sys.argv:
-        parser = argparse.ArgumentParser(
-            description="Launches Rhino and converts the given mesh file(s) to a CAD format. All options below are optional, the command works as long as the current working directory only contains mesh files"
-        )
-        parser.add_argument(
-            "--input", type=str, help="Path to the input file or folder, defaults to current folder if not given"
-        )
-        parser.add_argument(
-            "--output",
-            type=str,
-            help="Output folder, defaults to current folder if not given. Needs to alway be a folder, not a file",
-        )
-        parser.add_argument(
-            "--nopreprocessing", action="store_true", help="Turns off preprocessing. If not stated, preprocessing is enabled."
-        )
-        parser.add_argument(
-            "--preprocessing",
-            type=str,
-            help="Type of preprocessing, either 'shrinkwrap', 'fixholes', or 'fixshell'. Defaults to 'shrinkwrap'. Does nothing if nopreprocessing is stated",
-        )
-        parser.add_argument(
-            "--smoothing",
-            type=float,
-            default=0,
-            help="Sets the smoothing of the shrinkwrap function. It is advised to keep this at its default unless the input mesh has a blocky surface, since this lower the accuracy of the process.",
-        )
-        parser.add_argument(
-            "--nosubd", action="store_true", help="Turns off subdivision. If not stated, subdivision is enabled."
-        )
-        parser.add_argument(
-            "--subdtype",
-            default="1",
-            help="Sets the type of subd operation. '1' will result in merged faces, '2' will result in more individual faces. Defaults to '1'.",
-        )
-        parser.add_argument(
-            "--quadremeshlength",
-            type=float,
-            help="Sets the target edge length of the quad-remesh function in millimeters. Defaults to 2mm",
-        )
-        parser.add_argument(
-            "--shrinkwraplength",
-            type=float,
-            help="Sets the target edge length of the shrinkwrap function in millimeters. Defaults to 1mm and does nothing if a different type of preprocessing is selected.",
-        )
-        parser.add_argument(
-            "--filetype", type=str, help="File type of the output. Defaults to 'igs', but can also be 'iges', 'stp', or 'step'"
-        )
-        parser.add_argument(
-            "--heatmap",
-            action="store_true",
-            help="Generates heatmap of the distances between input and output mesh and saves it in the specified output folder. If not stated, no heatmap will be created.",
-        )
-        parser.add_argument(
-            "--savedistances",
-            action="store_true",
-            help="If stated, calculates chamfer and hausdorff distances between input and output mesh and stores them in a csv in the output folder. It is not recommended to turn this setting on if the input folder contains a lot of files, since it is rather slow.",
-        )
-        parser.add_argument(
-            "--keepopen",
-            action="store_true",
-            help="If stated, keeps rhino open after the process is done. Without this flag, rhino is closed automatically.",
-        )
-        parser.print_help()
-        return
+    # if "--help" in sys.argv or "-h" in sys.argv:
+    #     parser.print_help()
+    #     return
 
     # Launch rhino if not launched already
     if "Rhino.exe" not in sys.executable:
-
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--input",
-            type=str,
-            default=os.getcwd(),
-            help="Path to the input file or folder, defaults to current folder if not given, If folder is given, all files in that folder will be processed",
-        )
-        parser.add_argument(
-            "--output",
-            type=str,
-            help="Output folder, defaults to current folder or input folder if not given. Needs to alway be a folder, not a file",
-        )
-        parser.add_argument(
-            "--nopreprocessing", action="store_true", help="Turns off preprocessing. If not stated, preprocessing is enabled."
-        )
-        parser.add_argument(
-            "--preprocessing",
-            default="shrinkwrap",
-            help="Type of preprocessing, either 'shrinkwrap', 'fixholes', or 'fixshell'. Defaults to 'shrinkwrap'. Does nothing if nopreprocessing is stated",
-        )
-        parser.add_argument(
-            "--smoothing",
-            type=float,
-            default=0,
-            help="Sets the smoothing of the shrinkwrap function. It is advised to keep this at its default unless the input mesh has a blocky surface, since this lower the accuracy of the process.",
-        )
-        parser.add_argument(
-            "--nosubd", action="store_true", help="Turns off subdivision. If not stated, subdivision is enabled."
-        )
-        parser.add_argument(
-            "--subdtype",
-            default="1",
-            help="Sets the type of subd operation. '1' will result in merged faces, '2' will result in more individual faces. Defaults to '1'.",
-        )
-        parser.add_argument(
-            "--quadremeshlength",
-            type=float,
-            default=2,
-            help="Sets the target edge length of the quad-remesh function in millimeters. Defaults to 2mm",
-        )
-        parser.add_argument(
-            "--shrinkwraplength",
-            type=float,
-            default=1,
-            help="Sets the target edge length of the shrinkwrap function in millimeters. Defaults to 1mm and does nothing if a different type of preprocessing is selected.",
-        )
-        parser.add_argument(
-            "--filetype",
-            type=str,
-            default="igs",
-            help="File type of the output. Defaults to 'igs', but can also be 'iges', 'stp', or 'step'",
-        )
-        parser.add_argument(
-            "--heatmap",
-            action="store_true",
-            help="Generates heatmap of the distances between input and output mesh and saves it in the specified output folder. If not stated, no heatmap will be created.",
-        )
-        parser.add_argument(
-            "--savedistances",
-            action="store_true",
-            help="If stated, calculates chamfer and hausdorff distances between input and output mesh and stores them in a csv in the output folder. It is not recommended to turn this setting on if the input folder contains a lot of files, since it is rather slow.",
-        )
-        parser.add_argument(
-            "--keepopen",
-            action="store_true",
-            help="If stated, keeps rhino open after the process is done. Without this flag, rhino is closed automatically.",
-        )
-        args, unknown = parser.parse_known_args()
-
+        args = parser.parse_args()
         # Set environment variable for any args
         os.environ["INPUT_PATH"] = os.path.abspath(args.input)
         if not args.output:
@@ -249,7 +186,6 @@ def main():
                 subd=subd,
                 type=subdType,
             )
-            vol1 = rs.MeshVolume(shrink)
             cadFolder = os.path.join(resultsPath, "CADModel")
             os.makedirs(cadFolder, exist_ok=True)
             if cad:
@@ -272,8 +208,10 @@ def main():
                 os.makedirs(csvFolder, exist_ok=True)
                 if preProc:
                     distances = tools.chamferDistance(shrink, cad)
+                    vol1 = rs.MeshVolume(shrink)
                 else:
                     distances = tools.chamferDistance(org, cad)
+                    vol1 = rs.MeshVolume(org)
                 csvTable = [
                     ["Filename", "Chamfer Distance", "Hausdorff Distance", "Volume Original Mesh", "Volume remeshed NURBS"]
                 ]
@@ -340,7 +278,6 @@ def main():
                     subd=subd,
                     type=subdType,
                 )
-                vol1 = rs.MeshVolume(shrink)
                 if cad:
                     tools.exportMesh(cad, cadFolder, filetype, filename)
                     if heat:
@@ -355,8 +292,10 @@ def main():
                 if saveDist:
                     if preProc:
                         distances = tools.chamferDistance(shrink, cad)
+                        vol1 = rs.MeshVolume(shrink)
                     else:
                         distances = tools.chamferDistance(org, cad)
+                        vol1 = rs.MeshVolume(org)
                     stop = time.time()
                     csvTable.append([filename, distances[0], distances[1], stop - start, vol1[1], distances[2][1]])
                 else:

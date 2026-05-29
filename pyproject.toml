@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rhinoMeshTools"
+name = "mesh2nurbs_rhino3d"
 version = "0.2"
 dependencies = [
     "numpy==1.26.4",
@@ -15,5 +15,5 @@ dependencies = [
 ]
 
 [project.scripts]
-mesh2cad = "rhinoMeshTools.cli_full:main"
-fix-mesh = "rhinoMeshTools.cli_fix:main"
+mesh2nurbs = "mesh2nurbs_rhino3d.cli_full:main"
+fix-mesh = "mesh2nurbs_rhino3d.cli_fix:main"

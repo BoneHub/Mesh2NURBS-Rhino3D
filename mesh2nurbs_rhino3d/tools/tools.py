@@ -109,9 +109,9 @@ def stl2cad(mesh, targetEdgeLength=2, adaptiveSize=100, deleteInputs=True, subd=
     import rhinoscriptsyntax as rs
 
     shrink = mesh
-    retry = True
+    retry = 0
 
-    while retry:
+    while retry < 3:  # Limit the number of retries to prevent infinite loops
 
         rs.SelectObject(shrink)
         rs.Command(
@@ -135,10 +135,13 @@ def stl2cad(mesh, targetEdgeLength=2, adaptiveSize=100, deleteInputs=True, subd=
                     outMesh = subd_to_nurbs_many_faces(subd)
                 else:
                     print("Wrong input type, choose between '1' and '2'")
-            retry = False
+            break
         else:
-            print("Error: quadremesh failed, trying again...")
-            retry = True
+            print(f"Error: quadremesh failed, trying again {retry + 1}/3)")
+            retry += 1
+    else:
+        print("QuadRemesh failed after 3 attempts. Please check the input mesh and parameters.")
+        rs.Command("_-Exit No")
     return outMesh
 
 

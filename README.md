@@ -1,11 +1,11 @@
-# RhinoMeshTools
+# Mesh2NURBS-Rhino3D
 
-Tools for importing and processing mesh files from the command line using Rhino. Can also be used as a regular python package.
+A python package for converting 3D meshes into NURBS models (e.g. IGES format) through Rhino3D software.
 
 ## ✅ Requirements
 
 1.  Rhino 8 needs to be installed and able to be executed from `C:\Program Files\Rhino 8\System\Rhino.exe`
-2.  Python 3.x
+2.  [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install/overview)
 
 ## Installation
 

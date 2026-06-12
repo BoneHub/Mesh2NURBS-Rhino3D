@@ -2,6 +2,8 @@
 
 A python package for converting 3D meshes into NURBS models (e.g. IGES format) through Rhino3D software.
 
+This work has been presented at **[CAOS 2026](https://caos2026.org/)**. Paper DOI will be published once available.
+
 ## ✅ Requirements
 
 1.  Rhino 8 needs to be installed and able to be executed from `C:\Program Files\Rhino 8\System\Rhino.exe`

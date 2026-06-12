@@ -44,14 +44,14 @@ To get started, we recommend creating a dedicated virtual environment using Pyth
 
 **Note**: The previously create conda environment must be activated first.
 
-#### 1. `mesh2cad`
+#### 1. `mesh2nurbs`
 
 This command launches Rhino and converts the given mesh file(s) to a CAD format using the full pipeline.
 
 **Usage:**
 
 ```bash
-mesh2cad --input <input_file_or_folder_path> --output <output_folder_path> [other options...]
+mesh2nurbs --input <input_file_or_folder_path> --output <output_folder_path> [other options...]
 ```
 
 **Options:**
@@ -71,7 +71,7 @@ mesh2cad --input <input_file_or_folder_path> --output <output_folder_path> [othe
 **Example:**
 
 ```bash
-mesh2cad --input "C:\Path\To\Your\meshfile.ply" --output "C:\Path\To\OutputFolder" --filetype igs
+mesh2nurbs --input "C:\Path\To\Your\meshfile.ply" --output "C:\Path\To\OutputFolder" --filetype igs
 ```
 
 This will:
@@ -83,7 +83,7 @@ This will:
 
 You can also use `--help` to see all arguments:
 ```bash
-mesh2cad --help
+mesh2nurbs --help
 ```
 
 #### 2. `fix-mesh`
@@ -124,11 +124,11 @@ fix-mesh --help
 ### 🐍 As Python code
 
 You can import and use the functionalities directly in your Python scripts. If the script is run outside of Rhino, it will attempt to launch Rhino.
-Functions are available from the `rhinoMeshTools.tools` module.
+Functions are available from the `mesh2nurbs_rhino3d.tools` module.
 
 #### Available Functions:
 
-The following functions are available from `rhinoMeshTools.tools`:
+The following functions are available from `mesh2nurbs_rhino3d.tools`:
 
 *   **`importFile(inputPath)`**:
     *   Imports a mesh file into Rhino.

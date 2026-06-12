@@ -15,7 +15,7 @@ A python package for converting 3D meshes into NURBS models (e.g. IGES format) t
 
 This work has been presented at **[CAOS 2026](https://caos2026.org/)**. Paper DOI will be published once available.
 
-## ✅ Requirements
+## Requirements
 
 1.  Rhino 8 needs to be installed and able to be executed from `C:\Program Files\Rhino 8\System\Rhino.exe`
 2.  [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install/overview)
@@ -49,9 +49,9 @@ To get started, we recommend creating a dedicated virtual environment using Pyth
     ```
 
 
-## 🚀 Usage
+## Usage
 
-### 📖 Command-line
+### Command-line
 
 **Note**: The previously create conda environment must be activated first.
 
@@ -104,10 +104,10 @@ This command launches Rhino and performs pre-processing on a specified mesh file
 **Usage:**
 
 ```bash
-fix-mesh --input <path> --output <path> --preprocessing <type>
+fix-mesh --input <path> --output <path> --preprocessing <type>  [other options...]
 ```
 
-**Arguments:**
+**Options:**
 
 *   `--input <path>`: Path to the input file or folder. Defaults to the current folder if not given.
 *   `--output <path>`: Output folder. Defaults to the current folder if not given. This **must always be a folder path**, not a file path. File(s) will be saved with the extension of the input file in a "results" subfolder.
@@ -132,7 +132,7 @@ You can also use `--help` to see all arguments and their descriptions:
 fix-mesh --help
 ```
 
-### 🐍 As Python code
+### As Python code
 
 You can import and use the functionalities directly in your Python scripts. If the script is run outside of Rhino, it will attempt to launch Rhino.
 Functions are available from the `mesh2nurbs_rhino3d.tools` module.

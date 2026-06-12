@@ -2,51 +2,45 @@
 
 Tools for importing and processing mesh files from the command line using Rhino. Can also be used as a regular python package.
 
-## ✅ Pre-requisites
+## ✅ Requirements
 
-1.  Rhino 8 needs to be installed at `C:\Program Files\Rhino 8\System\Rhino.exe`
+1.  Rhino 8 needs to be installed and able to be executed from `C:\Program Files\Rhino 8\System\Rhino.exe`
 2.  Python 3.x
-3.  Your Python Scripts directory (e.g., `Python\Python3xx\Scripts`) needs to be in the `PATH` environment variable. The installer attempts to help with this.
 
-## 📦 Installation
+## Installation
 
 To get started, we recommend creating a dedicated virtual environment using Python's built-in `venv` module to manage the package and its dependencies.
 
-1.  **Download or clone this repository.**
-2.  **Extract the folder** (if zipped).
-3.  **Open a terminal or PowerShell window** inside the root folder of the repository (the one containing `setup.py`).
-4.  **Create a Python virtual environment** (e.g., named `my_package_env`):
+
+1.  **Create a conda environment**:
 
     ```bash
-    python -m venv my_package_env
+    conda create -n mesh2nurbs-rhino-env python==3.10
     ```
 
-5.  **Activate the new virtual environment:**
-
-    * **On Windows:**
-        ```bash
-        .\my_package_env\Scripts\activate
-        ```
-    * **On macOS/Linux:**
-        ```bash
-        source my_package_env/bin/activate
-        ```
-
-6.  **Install the package and its dependencies** into the activated environment (don't forget the dot **.**):
-
+2.  **Activate the environment:**
     ```bash
-    pip install .
+    conda activate mesh2nurbs-rhino-env
     ```
 
+
+3.  **Clone this repository**:
+    ```bash
+    git clone https://github.com/BoneHub/mesh2nurbs-rhino3d.git
+    ```
+
+4. **Install the package**:
+    ```bash
+    cd mesh2nurbs-rhino3d
+    pip install -e .
+    ```
 
 
 ## 🚀 Usage
 
-Once installed, the command-line tools can be run from anywhere in your terminal. The package can also be imported and used in your Python scripts.
+### 📖 Command-line
 
-**Important Note:** Most functionalities of this package require Rhino to be running, as they automate Rhino commands. The scripts are designed to launch Rhino if it's not already running when a command-line tool is invoked or when a Python script using this package is run outside of Rhino.
-
-### 📖 Command-line commands
+**Note**: The previously create conda environment must be activated first.
 
 #### 1. `mesh2cad`
 
@@ -58,7 +52,7 @@ This command launches Rhino and converts the given mesh file(s) to a CAD format 
 mesh2cad --input <input_file_or_folder_path> --output <output_folder_path> [other options...]
 ```
 
-**Arguments:**
+**Options:**
 *   `--input <path>`: Path to the input file or folder. Defaults to the current folder if not given. If a folder is given, all files in that folder will be processed.
 *   `--output <path>`: Output folder. Defaults to the input folder (if input is a file) or the current folder (if input is a folder and output is not specified). This **must always be a folder path**, not a file path. Results will be saved in a "results" subfolder within this path.
 *   `--nopreprocessing`: Turns off preprocessing. If not stated, preprocessing is enabled by default.

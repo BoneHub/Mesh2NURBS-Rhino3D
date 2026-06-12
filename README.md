@@ -1,4 +1,15 @@
 # Mesh2NURBS-Rhino3D
+<p align="center">
+    <img src="./webpage/workflow.png" width="100%" />
+</p>
+
+<p align="center">
+    <a href=""><img alt="Mesh2NURBS-Rhino3D" src="https://img.shields.io/badge/Webpage-Comming%20Soon-yellow"></a>
+    <a href=""><img alt="paper" src="https://img.shields.io/badge/Citation-Comming%20Soon-yellow"></a>
+</p>
+
+
+# Introduction
 
 A python package for converting 3D meshes into NURBS models (e.g. IGES format) through Rhino3D software.
 

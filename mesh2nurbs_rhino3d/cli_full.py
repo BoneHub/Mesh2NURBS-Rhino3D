@@ -38,6 +38,7 @@ def main():
         help="Sets the smoothing of the shrinkwrap function. It is advised to keep this at its default unless the input mesh has a blocky surface, since this lower the accuracy of the process.",
     )
     parser.add_argument("--nosubd", action="store_true", help="Turns off subdivision. If not stated, subdivision is enabled.")
+    # TODO: if subdtype is set to 2, consider an option to  use Rhino3D's "Rebuild" operation to make each patch eqaul in number of control points.
     parser.add_argument(
         "--subdtype",
         default="1",

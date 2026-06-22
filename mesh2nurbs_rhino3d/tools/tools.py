@@ -712,7 +712,19 @@ def subd_to_nurbs(subd_id):
         print("Error: _ToNurbs command did not result in a recognizable NURBS object for SubD ID {}.".format(subd_id))
         return None
 
+# TODO: replace this with built-in Rhibo3D options. see hints below:
+"""
+Command: ToNURBS
+1 object selected. 0 NURBS curves and 6668 NURBS surfaces will be created.
+6668 NURBS surfaces will be packed into 24 larger surfaces.
+To NURBS options ( DeleteInputObjects=No  SubDOptions ): SubDOptions
+SubD to NURBS ( Faces=Packed  ShowFacePacks=No  ForceUpdateFacePacks=No  ExtraordinaryVertex=G1x ): Faces=Unpacked
+SubD to NURBS ( Faces=Unpacked  ExtraordinaryVertex=G1x )
+To NURBS options ( DeleteInputObjects=No  SubDOptions ): DeleteInputObjects=Yes
+To NURBS options ( DeleteInputObjects=Yes  SubDOptions )
+Converting to NURBS... Press Esc to cancel
 
+"""
 def subd_to_nurbs_many_faces(subd_id):
     """
     Convert a SubD object to NURBS using RhinoCommon and return the NURBS object ID.

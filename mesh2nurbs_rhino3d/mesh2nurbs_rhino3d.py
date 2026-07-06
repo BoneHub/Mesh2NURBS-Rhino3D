@@ -110,11 +110,10 @@ def start_rhino():
 
 
 def main():
-    import scriptcontext
-    import rhinoscriptsyntax as rs
 
     # Disable view redraw to improve performance during processing
     if os.environ.get("NO_DISPLAY") == "True":
+        import scriptcontext
         scriptcontext.doc.Views.RedrawEnabled = False
 
     # Retrieve args from environment variables
@@ -166,7 +165,9 @@ def main():
                     shrinkwrap_length=shrinkwrap_length,
                 )
     if not keep_open:
+        import rhinoscriptsyntax as rs
         rs.Command("_-Exit No")
+        subprocess.run(["taskkill", "/F", "/IM", "Rhino.exe"], check=False)
 
 
 def preprocess(

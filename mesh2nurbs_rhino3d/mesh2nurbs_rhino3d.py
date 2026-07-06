@@ -83,6 +83,11 @@ def start_rhino():
         action="store_true",
         help="if stated, the Rhino application will remain open after the process is complete.",
     )
+    parser.add_argument(
+        "--no-display",
+        action="store_true",
+        help="if stated, the Rhino application will not be displayed during the process. This can reduce the processing time.",
+    )
 
     args = parser.parse_args()
     # Set environment variable for any args
@@ -97,6 +102,7 @@ def start_rhino():
     os.environ["QUADREMESH_LENGTH"] = str(args.quadremesh_length)
     os.environ["SHRINKWRAP_LENGTH"] = str(args.shrinkwrap_length)
     os.environ["KEEP_OPEN"] = str(args.keep_open)
+    os.environ["NO_DISPLAY"] = str(args.no_display)
 
     # Launch Rhino and run script
     command = f'"{args.rhino_path}" /nosplash /runscript="_-RunPythonScript ({os.path.abspath(__file__)})"'
@@ -108,7 +114,8 @@ def main():
     import rhinoscriptsyntax as rs
 
     # Disable view redraw to improve performance during processing
-    # scriptcontext.doc.Views.RedrawEnabled = False
+    if os.environ.get("NO_DISPLAY") == "True":
+        scriptcontext.doc.Views.RedrawEnabled = False
 
     # Retrieve args from environment variables
     input_path = os.environ.get("INPUT_PATH")
@@ -122,19 +129,6 @@ def main():
     quadremesh_length = float(os.environ.get("QUADREMESH_LENGTH"))
     shrinkwrap_length = float(os.environ.get("SHRINKWRAP_LENGTH"))
     keep_open = os.environ.get("KEEP_OPEN") == "True"
-
-    # print env variables for debugging
-    print(f"INPUT_PATH: {input_path}")
-    print(f"OUTPUT_FILETYPE: {output_filetype}")
-    print(f"PREPROCESSING_TYPE: {preprocessing_type}")
-    print(f"SMOOTHING: {smoothing}")
-    print(f"NOSUBD: {nosubd}")
-    print(f"PACKED_PATCHES: {packed_patches}")
-    print(f"FORCE_NCPS_U: {force_ncps_u}")
-    print(f"FORCE_NCPS_V: {force_ncps_v}")
-    print(f"QUADREMESH_LENGTH: {quadremesh_length}")
-    print(f"SHRINKWRAP_LENGTH: {shrinkwrap_length}")
-    print(f"KEEP_OPEN: {keep_open}")
 
     if os.path.isfile(input_path):
         # Single file mode

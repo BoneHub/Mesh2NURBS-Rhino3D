@@ -73,6 +73,7 @@ The package installs the `mesh2nurbs` command. It launches Rhino, processes one 
 | `--shrinkwrap-length` | float | `1.0` | Target shrinkwrap edge length in millimeters. Used only when `--preprocessing-type shrinkwrap` is selected. |
 | `--rhino-path` | path | `C:\Program Files\Rhino 8\System\Rhino.exe` | Path to the Rhino executable. |
 | `--keep-open` | flag | `False` | Leave Rhino open after processing finishes. |
+| `--no-display` | flag | `False` | Avoids displaying objects in Rhino to reduce processing time. |
 
 #### Examples
 

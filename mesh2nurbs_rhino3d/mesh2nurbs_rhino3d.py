@@ -3,7 +3,6 @@
 import os
 import subprocess
 import argparse
-from pathlib import Path
 
 
 def start_rhino():
@@ -109,7 +108,7 @@ def main():
     import rhinoscriptsyntax as rs
 
     # Disable view redraw to improve performance during processing
-    scriptcontext.doc.Views.RedrawEnabled = False
+    # scriptcontext.doc.Views.RedrawEnabled = False
 
     # Retrieve args from environment variables
     input_path = os.environ.get("INPUT_PATH")
@@ -124,9 +123,23 @@ def main():
     shrinkwrap_length = float(os.environ.get("SHRINKWRAP_LENGTH"))
     keep_open = os.environ.get("KEEP_OPEN") == "True"
 
-    if Path(input_path).is_file():
+    # print env variables for debugging
+    print(f"INPUT_PATH: {input_path}")
+    print(f"OUTPUT_FILETYPE: {output_filetype}")
+    print(f"PREPROCESSING_TYPE: {preprocessing_type}")
+    print(f"SMOOTHING: {smoothing}")
+    print(f"NOSUBD: {nosubd}")
+    print(f"PACKED_PATCHES: {packed_patches}")
+    print(f"FORCE_NCPS_U: {force_ncps_u}")
+    print(f"FORCE_NCPS_V: {force_ncps_v}")
+    print(f"QUADREMESH_LENGTH: {quadremesh_length}")
+    print(f"SHRINKWRAP_LENGTH: {shrinkwrap_length}")
+    print(f"KEEP_OPEN: {keep_open}")
+
+    if os.path.isfile(input_path):
         # Single file mode
-        output_path = Path(input_path).stem + "." + output_filetype
+        output_path = os.path.abspath(os.path.splitext(input_path)[0] + "." + output_filetype)
+        print(f"Processing single file: {input_path} -> {output_path}")
         mesh2nurbs(
             input_path,
             output_path,
@@ -140,13 +153,14 @@ def main():
             shrinkwrap_length=shrinkwrap_length,
         )
 
-    elif Path(input_path).is_dir():
+    elif os.path.isdir(input_path):
         # Batch mode
-        for file in Path(input_path).iterdir():
-            if file.is_file() and file.suffix.lower() in [".stl", ".obj", ".ply"]:
-                output_path = file.stem + "." + output_filetype
+        for file_name in os.listdir(input_path):
+            file = os.path.join(input_path, file_name)
+            if os.path.isfile(file) and os.path.splitext(file)[1].lower() in [".stl", ".obj", ".ply"]:
+                output_path = os.path.abspath(os.path.splitext(file)[0] + "." + output_filetype)
                 mesh2nurbs(
-                    str(file),
+                    file,
                     output_path,
                     preprocessing_type=preprocessing_type,
                     smoothing=smoothing,
@@ -179,7 +193,7 @@ def preprocess(
     rs.Command("_SelLast Enter")
     if preprocessing_type == "shrinkwrap":
         rs.Command(
-            f"_-NoEcho _-ShrinkWrap Resolution={shrinkwrap_length} Offset=0 Smooth={smoothing} PolygonOptimize=0 FillHoles=On VertexColors=Off DeleteInput=On Preview=Off DrawWires=On HideInput=Off Enter"
+            f"_-ShrinkWrap Resolution={shrinkwrap_length} Offset=0 Smooth={smoothing} PolygonOptimize=0 FillHoles=On VertexColors=Off DeleteInput=On Preview=Off DrawWires=On HideInput=Off Enter"
         )
         rs.Command("_SelLast Enter")
         rs.Command("_Invert Enter")
@@ -207,7 +221,7 @@ def preprocess(
 def mesh2nurbs(
     input_path: str,
     output_path: str,
-    preprocessing_type: str = None,
+    preprocessing_type: str = "none",
     smoothing: float = 0.0,
     subd: bool = True,
     packed_patches: bool = False,
@@ -222,7 +236,7 @@ def mesh2nurbs(
     Args:
         input_path (str): Path to the input mesh file.
         output_path (str): Path to the output NURBS file ending in '.iges' or '.step'.
-        preprocessing_type (str, optional): Type of pre-processing to apply. Options: 'shrinkwrap', 'fixholes', 'fixshell'. Defaults to None.
+        preprocessing_type (str, optional): Type of pre-processing to apply. Options: 'shrinkwrap', 'fixholes', 'fixshell'. Defaults to 'none'.
         smoothing (float, optional): Smoothing iterations for pre-processing. Defaults to 0.0.
         subd (bool, optional): If True, converts to SubD then NURBS. If False, directly to NURBS from QuadRemesh. Defaults to True.
         packed_patches (bool, optional): If True, packs patches during conversion. Defaults to False.
@@ -235,12 +249,12 @@ def mesh2nurbs(
     import rhinoscriptsyntax as rs
 
     # Step 1: Import the mesh and apply pre-processing if specified
-    rs.Command("_-NoEcho _-New No None Enter")
+    rs.Command("_-New No None Enter")
     rs.Command(f'_-Import "{input_path}" Enter')
 
     # Step 2: Apply pre-processing if specified
     keep_last()
-    if preprocessing_type:
+    if preprocessing_type != "none":
         preprocess(
             preprocessing_type=preprocessing_type,
             shrinkwrap_length=shrinkwrap_length,
@@ -249,31 +263,31 @@ def mesh2nurbs(
 
     # Step 2: Convert the mesh to Quadmesh and perform SubD if specified
     keep_last()
-    f"_-NoEcho _-QuadRemesh TargetEdgeLength={quadremesh_length} DetectEdges=On ToSubD={'On' if subd else 'Off'} Enter"
+    rs.Command(f"_-QuadRemesh TargetEdgeLength={quadremesh_length} DetectEdges=On ToSubD={'On' if subd else 'Off'} Enter")
 
     # Step 3: Convert NURBS
     keep_last()
     if subd:  # packed patches is available when subd is used
         if packed_patches:
-            rs.Command("_-NoEcho _-ToNurbs DeleteInputObjects=Yes SubDOptions Faces=Packed Enter Enter")
+            rs.Command("_-ToNurbs DeleteInputObjects=Yes SubDOptions Faces=Packed Enter Enter")
         else:
-            rs.Command("_-NoEcho _-ToNurbs DeleteInputObjects=Yes SubDOptions Faces=Unpacked Enter Enter")
+            rs.Command("_-ToNurbs DeleteInputObjects=Yes SubDOptions Faces=Unpacked Enter Enter")
 
     else:  # packed patches is not available when subd is not used
-        rs.Command("_-NoEcho _-ToNurbs DeleteInputObjects=Yes Enter")
+        rs.Command("_-ToNurbs DeleteInputObjects=Yes Enter")
 
     # Step 4: Rebuild NURBS if force_ncps_u or force_ncps_v is specified
     if force_ncps_u and force_ncps_v:
         # ensure that the number of control points is greater than 3 to maintain the NURBS degree=3.
         if force_ncps_u > 3 and force_ncps_v > 3:
             keep_last()
-            rs.Command(f"_-NoEcho _-Explode Enter")
-            rs.Command(f"_-NoEcho _-SelAll Enter")
+            rs.Command(f"_-Explode Enter")
+            rs.Command(f"_-SelAll Enter")
             rs.Command(
-                f"_-NoEcho _-Rebuild UPointCount={force_ncps_u} VPointCount={force_ncps_v} UDegree=3 VDegree=3 DeleteInput=Yes ReTrim=No Enter"
+                f"_-Rebuild UPointCount={force_ncps_u} VPointCount={force_ncps_v} UDegree=3 VDegree=3 DeleteInput=Yes ReTrim=No Enter"
             )
-            rs.Command(f"_-NoEcho _-SelAll Enter")
-            rs.Command(f"_-NoEcho _-Join Enter")
+            rs.Command(f"_-SelAll Enter")
+            rs.Command(f"_-Join Enter")
         else:
             raise ValueError("force_ncps_u and force_ncps_v must be greater than 3 to maintain NURBS degree=3.")
 

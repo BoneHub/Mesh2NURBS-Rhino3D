@@ -9,3 +9,6 @@ dependencies = []
 
 [project.scripts]
 mesh2nurbs = "mesh2nurbs_rhino3d.mesh2nurbs_rhino3d:cli_entry_point"
+
+[tool.setuptools]
+packages = ["mesh2nurbs_rhino3d"]

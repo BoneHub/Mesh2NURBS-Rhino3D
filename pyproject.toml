@@ -4,16 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mesh2nurbs_rhino3d"
-version = "0.2"
-dependencies = [
-    # "numpy==1.26.4",
-    # "scipy",
-    # "point_cloud_utils",
-    # "pandas",
-    # "vedo",
-    # "matplotlib",
-]
+version = "1.0"
+dependencies = []
 
 [project.scripts]
-mesh2nurbs = "mesh2nurbs_rhino3d.cli_full:main"
-fix-mesh = "mesh2nurbs_rhino3d.cli_fix:main"
+mesh2nurbs = "mesh2nurbs_rhino3d.mesh2nurbs_rhino3d:cli_entry_point"

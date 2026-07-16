@@ -28,7 +28,7 @@ To get started, we recommend creating a dedicated virtual environment using Pyth
 1.  **Create a conda environment**:
 
     ```bash
-    conda create -n mesh2nurbs-rhino-env python==3.10
+    conda create -n mesh2nurbs-rhino-env python=3.10
     ```
 
 2.  **Activate the environment:**

@@ -22,24 +22,21 @@ This work has been presented at **[CAOS 2026](https://caos2026.org/)**. Paper DO
 
 ## Installation
 
-To get started, we recommend creating a dedicated virtual environment using Python's built-in `venv` module to manage the package and its dependencies.
-
-
 1.  **Create a conda environment**:
 
     ```bash
-    conda create -n mesh2nurbs-rhino-env python==3.10
+    conda create -n mesh2nurbs-rhino3d python==3.10
     ```
 
 2.  **Activate the environment:**
     ```bash
-    conda activate mesh2nurbs-rhino-env
+    conda activate mesh2nurbs-rhino3d
     ```
 
 
 3.  **Clone this repository**:
     ```bash
-    git clone https://github.com/BoneHub/mesh2nurbs-rhino3d.git
+    git clone https://github.com/BoneHub/Mesh2NURBS-Rhino3D.git
     ```
 
 4. **Install the package**:
@@ -55,7 +52,7 @@ To get started, we recommend creating a dedicated virtual environment using Pyth
 
 **Note**: Activate the conda environment before running the command-line tool.
 
-The package installs the `mesh2nurbs` command. It launches Rhino, processes one mesh file or all supported meshes in a folder, and exports the result as IGES or STEP.
+The package installs the `mesh2nurbs-rhino3d` command. It launches Rhino, processes one mesh file or all supported meshes in a folder, and exports the result as IGES or STEP.
 
 #### Arguments
 
@@ -80,13 +77,13 @@ The package installs the `mesh2nurbs` command. It launches Rhino, processes one 
 Process a single mesh with the default pipeline:
 
 ```bash
-mesh2nurbs -i "C:\path\to\mesh.obj"
+mesh2nurbs-rhino3d -i "C:\path\to\mesh.obj"
 ```
 
 Use preprocessing with shrinkwrap, custom remeshing, and packed patches:
 
 ```bash
-mesh2nurbs -i "C:\path\to\mesh.obj" \
+mesh2nurbs-rhino3d -i "C:\path\to\mesh.obj" \
     --preprocessing-type shrinkwrap \
     --shrinkwrap-length 1.5 \
     --quadremesh-length 2.5 \
@@ -96,19 +93,19 @@ mesh2nurbs -i "C:\path\to\mesh.obj" \
 Skip SubD and convert directly to NURBS:
 
 ```bash
-mesh2nurbs -i "C:\path\to\mesh.obj" --nosubd
+mesh2nurbs-rhino3d -i "C:\path\to\mesh.obj" --nosubd
 ```
 
 Force the NURBS rebuild to use specific control point counts in both directions:
 
 ```bash
-mesh2nurbs -i "C:\path\to\mesh.obj" --force-ncps-u 8 --force-ncps-v 8
+mesh2nurbs-rhino3d -i "C:\path\to\mesh.obj" --force-ncps-u 8 --force-ncps-v 8
 ```
 
 Process every supported mesh in a folder and keep Rhino open:
 
 ```bash
-mesh2nurbs -i "C:\path\to\folder" --output-filetype step --keep-open
+mesh2nurbs-rhino3d -i "C:\path\to\folder" --output-filetype step --keep-open
 ```
 
 Recommended combinations for the requested arguments:

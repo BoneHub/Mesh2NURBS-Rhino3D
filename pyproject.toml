@@ -7,8 +7,8 @@ name = "mesh2nurbs_rhino3d"
 version = "1.0"
 dependencies = []
 
-[project.scripts]
-mesh2nurbs = "mesh2nurbs_rhino3d.mesh2nurbs_rhino3d:cli_entry_point"
-
 [tool.setuptools]
 packages = ["mesh2nurbs_rhino3d"]
+
+[project.scripts]
+mesh2nurbs-rhino3d = "mesh2nurbs_rhino3d.mesh2nurbs_rhino3d:cli_entry_point"

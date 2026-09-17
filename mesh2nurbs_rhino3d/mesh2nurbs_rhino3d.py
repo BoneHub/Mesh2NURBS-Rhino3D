@@ -4,6 +4,8 @@ import os
 import subprocess
 import argparse
 
+PREPROCESSING_STEPS = ["shrinkwrap", "fixholes", "remove-isolated-islands"]
+
 
 def start_rhino():
 
@@ -26,11 +28,12 @@ def start_rhino():
         help="Filetype of the output CAD file. Defaults to 'iges'.",
     )
     parser.add_argument(
-        "--preprocessing-type",
+        "--preprocessing-steps",
         type=str,
-        choices=["none", "shrinkwrap", "fixholes", "fixshell"],
-        default="none",
-        help="Type of preprocessing. Does nothing if set to 'none'.",
+        nargs="+",
+        choices=["none"] + PREPROCESSING_STEPS,
+        default=["none"],
+        help="One or more preprocessing steps, applied in the given order (e.g. '--preprocessing-steps remove-isolated-islands fixholes shrinkwrap'). Does nothing if set to 'none'.",
     )
     parser.add_argument(
         "--smoothing",
@@ -90,10 +93,14 @@ def start_rhino():
     )
 
     args = parser.parse_args()
+    preprocessing_steps = [step for step in args.preprocessing_steps if step != "none"]
+    if preprocessing_steps and len(preprocessing_steps) != len(args.preprocessing_steps):
+        parser.error("'none' cannot be combined with other preprocessing steps.")
+
     # Set environment variable for any args
     os.environ["INPUT_PATH"] = os.path.abspath(args.input_path)
     os.environ["OUTPUT_FILETYPE"] = args.output_filetype
-    os.environ["PREPROCESSING_TYPE"] = args.preprocessing_type
+    os.environ["PREPROCESSING_STEPS"] = ",".join(preprocessing_steps) if preprocessing_steps else "none"
     os.environ["SMOOTHING"] = str(args.smoothing)
     os.environ["NOSUBD"] = str(args.nosubd)
     os.environ["PACKED_PATCHES"] = str(args.packed_patches)
@@ -119,7 +126,7 @@ def main():
     # Retrieve args from environment variables
     input_path = os.environ.get("INPUT_PATH")
     output_filetype = os.environ.get("OUTPUT_FILETYPE")
-    preprocessing_type = os.environ.get("PREPROCESSING_TYPE")
+    preprocessing_steps = [step for step in os.environ.get("PREPROCESSING_STEPS").split(",") if step and step != "none"]
     smoothing = float(os.environ.get("SMOOTHING"))
     nosubd = os.environ.get("NOSUBD") == "True"
     packed_patches = os.environ.get("PACKED_PATCHES") == "True"
@@ -136,7 +143,7 @@ def main():
         mesh2nurbs(
             input_path,
             output_path,
-            preprocessing_type=preprocessing_type,
+            preprocessing_steps=preprocessing_steps,
             smoothing=smoothing,
             subd=not nosubd,
             packed_patches=packed_patches,
@@ -155,7 +162,7 @@ def main():
                 mesh2nurbs(
                     file,
                     output_path,
-                    preprocessing_type=preprocessing_type,
+                    preprocessing_steps=preprocessing_steps,
                     smoothing=smoothing,
                     subd=not nosubd,
                     packed_patches=packed_patches,
@@ -171,52 +178,109 @@ def main():
 
 
 def preprocess(
-    preprocessing_type="shrinkwrap",
+    preprocessing_steps=("shrinkwrap",),
     shrinkwrap_length=1.0,
     smoothing=0.0,
 ):
     """
-    Performs pre-processing operations on a mesh object.
+    Performs a chain of pre-processing operations on the mesh in the active Rhino document.
+    The steps are applied in the given order, each one operating on the result of the previous step.
+    Afterwards, the document contains only the resulting mesh, which is selected.
 
     Args:
-        preprocessing_type (str): Type of pre-processing to apply. Options: 'shrinkwrap', 'fixholes', 'fixshell'.
-        shrinkwrap_length (float): Resolution for shrinkwrap pre-processing. Only used if preprocessing_type is 'shrinkwrap'.
-        smoothing (float): Smoothing iterations for pre-processing. Only used if preprocessing_type is 'shrinkwrap'.
+        preprocessing_steps (str or list of str): Pre-processing step(s) to apply in order.
+            Options: 'shrinkwrap', 'fixholes', 'remove-isolated-islands'.
+        shrinkwrap_length (float): Resolution for shrinkwrap pre-processing. Only used by the 'shrinkwrap' step.
+        smoothing (float): Smoothing iterations for pre-processing. Only used by the 'shrinkwrap' step.
+    """
+    if isinstance(preprocessing_steps, str):
+        preprocessing_steps = [preprocessing_steps]
+
+    invalid_steps = [step for step in preprocessing_steps if step not in PREPROCESSING_STEPS]
+    if invalid_steps:
+        raise ValueError(f"Wrong preprocessing_steps given: {invalid_steps}. Choose from {PREPROCESSING_STEPS}")
+
+    steps = {
+        "shrinkwrap": lambda: preprocess_shrinkwrap(shrinkwrap_length=shrinkwrap_length, smoothing=smoothing),
+        "fixholes": preprocess_fixholes,
+        "remove-isolated-islands": preprocess_remove_isolated_islands,
+    }
+    for i, step in enumerate(preprocessing_steps, start=1):
+        print(f"Preprocessing step {i}/{len(preprocessing_steps)}: {step}")
+        steps[step]()
+
+
+def preprocess_shrinkwrap(shrinkwrap_length=1.0, smoothing=0.0):
+    """
+    Replaces the mesh with a watertight shrink-wrapped version of it.
     """
     import rhinoscriptsyntax as rs
 
+    rs.Command("_-SelAll Enter")
+    rs.Command(
+        f"_-ShrinkWrap Resolution={shrinkwrap_length} Offset=0 Smooth={smoothing} PolygonOptimize=0 FillHoles=On VertexColors=Off DeleteInput=On Preview=Off DrawWires=On HideInput=Off Enter"
+    )
     rs.Command("_SelLast Enter")
-    if preprocessing_type == "shrinkwrap":
-        rs.Command(
-            f"_-ShrinkWrap Resolution={shrinkwrap_length} Offset=0 Smooth={smoothing} PolygonOptimize=0 FillHoles=On VertexColors=Off DeleteInput=On Preview=Off DrawWires=On HideInput=Off Enter"
-        )
-        rs.Command("_SelLast Enter")
-        rs.Command("_Invert Enter")
-        rs.Command("_Delete Enter")
-    elif preprocessing_type == "fixholes":
-        rs.Command("_-FillMeshHoles Enter")
-        rs.Command("_-SelAll Enter")
-    elif preprocessing_type == "fixshell":
-        rs.Command("_-SelAll Enter")
-        rs.Command("_-SplitDisjointMesh Enter")
-        rs.Command("_-SelAll Enter")
-        allMeshes = rs.SelectedObjects()
-        area = []
-        for mesh in allMeshes:
-            area.append(rs.MeshArea(mesh)[1])
-        rs.UnselectAllObjects()
-        rs.SelectObject(allMeshes[area.index(max(area))])
-        rs.Command("_-Invert Enter")
-        rs.Command("_-Delete Enter")
-        rs.Command("_-SelAll Enter")
-    else:
-        raise ValueError("Wrong preprocessing_type given, choose between 'shrinkwrap', 'fixholes', or 'fixshell'")
+    rs.Command("_Invert Enter")
+    rs.Command("_Delete Enter")
+    rs.Command("_-SelAll Enter")
+
+
+def preprocess_fixholes():
+    """
+    Fills all holes of the mesh.
+    """
+    import rhinoscriptsyntax as rs
+
+    rs.Command("_-SelAll Enter")
+    rs.Command("_-FillMeshHoles Enter")
+    rs.Command("_-SelAll Enter")
+
+
+def preprocess_remove_isolated_islands():
+    """
+    Keeps only the largest connected mesh (island) and removes everything else.
+
+    All mesh objects in the document are combined into one mesh, which is split into its connected pieces
+    (the same connectivity Rhino's SplitDisjointMesh uses). The piece with the largest surface area is kept;
+    all other pieces and objects are deleted.
+    """
+    import Rhino
+    import rhinoscriptsyntax as rs
+    import scriptcontext as sc
+
+    mesh_ids = rs.ObjectsByType(rs.filter.mesh) or []
+    if not mesh_ids:
+        raise RuntimeError("remove-isolated-islands: no mesh found in the document.")
+
+    combined = Rhino.Geometry.Mesh()
+    for mesh_id in mesh_ids:
+        combined.Append(rs.coercemesh(mesh_id))
+
+    pieces = list(combined.SplitDisjointPieces() or []) or [combined]
+
+    def mesh_area(mesh):
+        props = Rhino.Geometry.AreaMassProperties.Compute(mesh)
+        return props.Area if props else 0.0
+
+    largest = max(pieces, key=mesh_area)
+    largest.Compact()
+    largest.Normals.ComputeNormals()
+    print(f"remove-isolated-islands: found {len(pieces)} island(s), keeping the largest one.")
+
+    # Put the largest island into the first mesh object and delete everything else
+    rs.Command("_-SelAll Enter")
+    rs.UnselectObject(mesh_ids[0])
+    rs.Command("_Delete Enter")
+    sc.doc.Objects.Replace(mesh_ids[0], largest)
+    rs.Command("_-SelAll Enter")
+    sc.doc.Views.Redraw()
 
 
 def mesh2nurbs(
     input_path: str,
     output_path: str,
-    preprocessing_type: str = "none",
+    preprocessing_steps="none",
     smoothing: float = 0.0,
     subd: bool = True,
     packed_patches: bool = False,
@@ -231,7 +295,8 @@ def mesh2nurbs(
     Args:
         input_path (str): Path to the input mesh file.
         output_path (str): Path to the output NURBS file ending in '.iges' or '.step'.
-        preprocessing_type (str, optional): Type of pre-processing to apply. Options: 'shrinkwrap', 'fixholes', 'fixshell'. Defaults to 'none'.
+        preprocessing_steps (str or list of str, optional): Pre-processing step(s) to apply in order. Options: 'none',
+            'shrinkwrap', 'fixholes', 'remove-isolated-islands'. Defaults to 'none'.
         smoothing (float, optional): Smoothing iterations for pre-processing. Defaults to 0.0.
         subd (bool, optional): If True, converts to SubD then NURBS. If False, directly to NURBS from QuadRemesh. Defaults to True.
         packed_patches (bool, optional): If True, packs patches during conversion. Defaults to False.
@@ -247,20 +312,26 @@ def mesh2nurbs(
     rs.Command("_-New No None Enter")
     rs.Command(f'_-Import "{input_path}" Enter')
 
-    # Step 2: Apply pre-processing if specified
+    # Step 2: Apply the chain of pre-processing steps if specified
     keep_last()
-    if preprocessing_type != "none":
+    if isinstance(preprocessing_steps, str):
+        preprocessing_steps = [preprocessing_steps]
+    preprocessing_steps = [step for step in preprocessing_steps if step != "none"]
+    if preprocessing_steps:
         preprocess(
-            preprocessing_type=preprocessing_type,
+            preprocessing_steps=preprocessing_steps,
             shrinkwrap_length=shrinkwrap_length,
             smoothing=smoothing,
         )
+        # every preprocessing step leaves only the resulting mesh selected
+        keep_selected()
+    else:
+        keep_last()
 
-    # Step 2: Convert the mesh to Quadmesh and perform SubD if specified
-    keep_last()
+    # Step 3: Convert the mesh to Quadmesh and perform SubD if specified
     rs.Command(f"_-QuadRemesh TargetEdgeLength={quadremesh_length} DetectEdges=On ToSubD={'On' if subd else 'Off'} Enter")
 
-    # Step 3: Convert NURBS
+    # Step 4: Convert NURBS
     keep_last()
     if subd:  # packed patches is available when subd is used
         if packed_patches:
@@ -271,7 +342,7 @@ def mesh2nurbs(
     else:  # packed patches is not available when subd is not used
         rs.Command("_-ToNurbs DeleteInputObjects=Yes Enter")
 
-    # Step 4: Rebuild NURBS if force_ncps_u or force_ncps_v is specified
+    # Step 5: Rebuild NURBS if force_ncps_u or force_ncps_v is specified
     if force_ncps_u and force_ncps_v:
         # ensure that the number of control points is greater than 3 to maintain the NURBS degree=3.
         if force_ncps_u > 3 and force_ncps_v > 3:
@@ -286,7 +357,7 @@ def mesh2nurbs(
         else:
             raise ValueError("force_ncps_u and force_ncps_v must be greater than 3 to maintain NURBS degree=3.")
 
-    # Step 5: Export the final NURBS object to the specified output path
+    # Step 6: Export the final NURBS object to the specified output path
     keep_last()
     rs.Command(
         f'_-Export _Version=8 _SaveSmall=No _GeometryOnly=Yes _SaveTextures=No _SaveNotes=No _SavePlugInData=No "{output_path}" _Enter _Enter'
@@ -303,6 +374,17 @@ def keep_last():
     rs.Command("_Invert Enter")
     rs.Command("_Delete Enter")
     rs.Command("_SelLast Enter")
+
+
+def keep_selected():
+    """
+    Keep only the currently selected objects in the Rhino document, deleting all others.
+    """
+    import rhinoscriptsyntax as rs
+
+    rs.Command("_Invert Enter")
+    rs.Command("_Delete Enter")
+    rs.Command("_-SelAll Enter")
 
 
 def cli_entry_point():

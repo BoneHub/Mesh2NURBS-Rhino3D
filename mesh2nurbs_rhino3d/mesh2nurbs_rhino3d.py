@@ -23,9 +23,10 @@ def start_rhino():
     parser.add_argument(
         "--output-filetype",
         type=str,
+        nargs="+",
         choices=["iges", "step"],
-        default="iges",
-        help="Filetype of the output CAD file. Defaults to 'iges'.",
+        default=["iges"],
+        help="One or more filetypes of the output CAD file (e.g. '--output-filetype iges step' saves both). Defaults to 'iges'.",
     )
     parser.add_argument(
         "--preprocessing-steps",
@@ -99,7 +100,7 @@ def start_rhino():
 
     # Set environment variable for any args
     os.environ["INPUT_PATH"] = os.path.abspath(args.input_path)
-    os.environ["OUTPUT_FILETYPE"] = args.output_filetype
+    os.environ["OUTPUT_FILETYPES"] = ",".join(dict.fromkeys(args.output_filetype))
     os.environ["PREPROCESSING_STEPS"] = ",".join(preprocessing_steps) if preprocessing_steps else "none"
     os.environ["SMOOTHING"] = str(args.smoothing)
     os.environ["NOSUBD"] = str(args.nosubd)
@@ -125,7 +126,7 @@ def main():
 
     # Retrieve args from environment variables
     input_path = os.environ.get("INPUT_PATH")
-    output_filetype = os.environ.get("OUTPUT_FILETYPE")
+    output_filetypes = os.environ.get("OUTPUT_FILETYPES").split(",")
     preprocessing_steps = [step for step in os.environ.get("PREPROCESSING_STEPS").split(",") if step and step != "none"]
     smoothing = float(os.environ.get("SMOOTHING"))
     nosubd = os.environ.get("NOSUBD") == "True"
@@ -138,11 +139,11 @@ def main():
 
     if os.path.isfile(input_path):
         # Single file mode
-        output_path = os.path.abspath(os.path.splitext(input_path)[0] + "." + output_filetype)
-        print(f"Processing single file: {input_path} -> {output_path}")
+        output_paths = [os.path.abspath(os.path.splitext(input_path)[0] + "." + ft) for ft in output_filetypes]
+        print(f"Processing single file: {input_path} -> {', '.join(output_paths)}")
         mesh2nurbs(
             input_path,
-            output_path,
+            output_paths,
             preprocessing_steps=preprocessing_steps,
             smoothing=smoothing,
             subd=not nosubd,
@@ -158,10 +159,10 @@ def main():
         for file_name in os.listdir(input_path):
             file = os.path.join(input_path, file_name)
             if os.path.isfile(file) and os.path.splitext(file)[1].lower() in [".stl", ".obj", ".ply"]:
-                output_path = os.path.abspath(os.path.splitext(file)[0] + "." + output_filetype)
+                output_paths = [os.path.abspath(os.path.splitext(file)[0] + "." + ft) for ft in output_filetypes]
                 mesh2nurbs(
                     file,
-                    output_path,
+                    output_paths,
                     preprocessing_steps=preprocessing_steps,
                     smoothing=smoothing,
                     subd=not nosubd,
@@ -279,7 +280,7 @@ def preprocess_remove_isolated_islands():
 
 def mesh2nurbs(
     input_path: str,
-    output_path: str,
+    output_path,
     preprocessing_steps="none",
     smoothing: float = 0.0,
     subd: bool = True,
@@ -294,7 +295,8 @@ def mesh2nurbs(
 
     Args:
         input_path (str): Path to the input mesh file.
-        output_path (str): Path to the output NURBS file ending in '.iges' or '.step'.
+        output_path (str or list of str): Path(s) to the output NURBS file(s) ending in '.iges' or '.step'.
+            The result is exported once per given path.
         preprocessing_steps (str or list of str, optional): Pre-processing step(s) to apply in order. Options: 'none',
             'shrinkwrap', 'fixholes', 'remove-isolated-islands'. Defaults to 'none'.
         smoothing (float, optional): Smoothing iterations for pre-processing. Defaults to 0.0.
@@ -357,11 +359,13 @@ def mesh2nurbs(
         else:
             raise ValueError("force_ncps_u and force_ncps_v must be greater than 3 to maintain NURBS degree=3.")
 
-    # Step 6: Export the final NURBS object to the specified output path
-    keep_last()
-    rs.Command(
-        f'_-Export _Version=8 _SaveSmall=No _GeometryOnly=Yes _SaveTextures=No _SaveNotes=No _SavePlugInData=No "{output_path}" _Enter _Enter'
-    )
+    # Step 6: Export the final NURBS object to the specified output path(s)
+    output_paths = [output_path] if isinstance(output_path, str) else output_path
+    for path in output_paths:
+        keep_last()
+        rs.Command(
+            f'_-Export _Version=8 _SaveSmall=No _GeometryOnly=Yes _SaveTextures=No _SaveNotes=No _SavePlugInData=No "{path}" _Enter _Enter'
+        )
 
 
 def keep_last():

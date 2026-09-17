@@ -54,7 +54,7 @@ The package installs the `mesh2nurbs-rhino3d` command. It launches Rhino, proces
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `-i, --input-path` | path | current working directory | Input mesh file or folder. If a folder is provided, all `.stl`, `.obj`, and `.ply` files in that folder are processed. |
-| `--output-filetype` | `iges` or `step` | `iges` | Output CAD file type. |
+| `--output-filetype` | one or more of `iges`, `step` | `iges` | Output CAD file type(s). Give several to save all of them, e.g. `--output-filetype iges step`. |
 | `--preprocessing-steps` | one or more of `none`, `shrinkwrap`, `fixholes`, `remove-isolated-islands` | `none` | Chain of preprocessing steps applied before conversion, in the given order. `none` skips preprocessing and cannot be combined with other steps. See [Preprocessing](#preprocessing). |
 | `--smoothing` | float | `0.0` | Smoothing value used by the `shrinkwrap` step. Ignored if `shrinkwrap` is not in the chain. |
 | `--nosubd` | flag | `False` | Skip the SubD step and convert directly to NURBS. Produces non-smooth patch connections. |

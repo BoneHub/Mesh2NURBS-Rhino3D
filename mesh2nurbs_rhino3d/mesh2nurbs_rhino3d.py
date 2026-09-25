@@ -331,7 +331,11 @@ def mesh2nurbs(
         keep_last()
 
     # Step 3: Convert the mesh to Quadmesh and perform SubD if specified
-    rs.Command(f"_-QuadRemesh TargetEdgeLength={quadremesh_length} DetectEdges=On ToSubD={'On' if subd else 'Off'} Enter")
+    rs.Command(f"_-QuadRemesh AdaptQuadCount=Off TargetEdgeLength={quadremesh_length} DetectEdges=Off Enter")
+
+    # step 4: Sub Division
+    keep_last()
+    rs.Command("_-ToSubD DeleteInput=Yes Enter")
 
     # Step 4: Convert NURBS
     keep_last()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mesh2nurbs_rhino3d"
-version = "1.0"
+version = "2.0"
 dependencies = []
 
 [tool.setuptools]
